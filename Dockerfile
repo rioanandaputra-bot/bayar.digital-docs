@@ -29,4 +29,7 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD nginx -t || exit 1
 
+STOPSIGNAL SIGQUIT
+CMD ["nginx", "-g", "daemon off; error_log /dev/stderr info;"]
+
 EXPOSE 80
