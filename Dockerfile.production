@@ -3,36 +3,27 @@ FROM oven/bun:alpine AS build
 
 WORKDIR /app
 
-# Install deps
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
-# Copy source
 COPY . .
 
-# Build
+# IMPORTANT: fail kalau build error
 RUN bun run build
 
-# Debug (optional)
-RUN ls -lah /app
-RUN ls -lah /app/dist || true
+# DEBUG WAJIB (biar yakin)
+RUN echo "=== BUILD RESULT ===" && ls -lah /app/build
 
 
 # ── Production stage ───────────────────────────────────────
 FROM nginx:1-alpine
 
-# Clean default nginx
 RUN rm -rf /usr/share/nginx/html/*
 
-# ✅ FIX UTAMA DI SINI
-COPY --from=build /app/dist /usr/share/nginx/html
+# ✅ DOCUSAURUS = BUILD (INI SUDAH BENAR)
+COPY --from=build /app/build /usr/share/nginx/html
 
-# nginx config
 COPY nginx.conf /etc/nginx/templates/default.conf.template
-
-# healthcheck
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
 
 EXPOSE 80
 
