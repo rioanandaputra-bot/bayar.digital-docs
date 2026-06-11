@@ -48,7 +48,7 @@ Content-Type: application/json
 | `merchant_account_id` | UUID | Ya | ID dari `GET /gateway/accounts`. |
 | `payment_code` | string | Ya | Kode unik dari sistem tenant, maksimal 100 karakter. |
 | `amount_original` | integer | Ya | Nominal order sebelum nominal unik. |
-| `expired_at` | integer | Ya | Waktu kedaluwarsa dalam epoch milliseconds dan harus di masa depan. |
+| `expired_at` | integer | Ya | Waktu kedaluwarsa dalam epoch milliseconds (contoh: `1791691200000`). Harus di masa depan. Response get payment mengembalikan field ini dalam format ISO 8601. |
 | `customer_name` | string | Ya | Nama customer, maksimal 255 karakter. |
 | `customer_email` | string | Tidak | Email customer. |
 | `customer_phone` | string | Tidak | Nomor telepon customer, maksimal 50 karakter. |

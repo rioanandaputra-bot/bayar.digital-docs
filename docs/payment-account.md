@@ -29,7 +29,7 @@ curl https://api.bayar.digital/gateway/accounts \
   "data": [
     {
       "id": "550e8400-e29b-41d4-a716-446655440000",
-      "channel_id": "bank-bca",
+      "channel_id": "550e8400-e29b-41d4-a716-446655440010",
       "account_number": "1234567890",
       "account_name": "PT Tenant Contoh",
       "bank_name": "Bank BCA",
@@ -37,7 +37,7 @@ curl https://api.bayar.digital/gateway/accounts \
     },
     {
       "id": "550e8400-e29b-41d4-a716-446655440001",
-      "channel_id": "qris",
+      "channel_id": "550e8400-e29b-41d4-a716-446655440011",
       "qris_id": "QRIS-001",
       "qris_name": "PT Tenant Contoh",
       "qris_city": "Jakarta",

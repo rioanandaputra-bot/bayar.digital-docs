@@ -8,6 +8,10 @@ Dokumentasi ini ditujukan untuk developer tenant yang ingin menghubungkan sistem
 
 Integrasi dilakukan dari server tenant ke API Bayar Digital. API key tidak boleh dikirim dari browser, aplikasi mobile customer, atau aplikasi lain yang tidak berada di kontrol backend tenant.
 
+:::tip Mulai Cepat
+Lihat [Quickstart](./quickstart) untuk panduan langkah demi langkah — dari signup sampai payment pertama terverifikasi dalam 30 menit.
+:::
+
 ## Base URL
 
 | Environment | Base URL |
@@ -108,6 +112,6 @@ Response paginated memakai `meta`:
 4. Panggil `GET /gateway/accounts` untuk memilih `merchant_account_id`.
 5. Buat payment dari order internal dengan `POST /gateway/payments`.
 6. Simpan `payment_code`, `id`, `amount_total`, `status`, dan `checkout_url`.
-7. Redirect customer ke `checkout_url` atau tampilkan instruksi pembayaran.
+7. Redirect customer ke `checkout_url` ([baca Checkout](./checkout)) atau tampilkan instruksi pembayaran.
 8. Terima webhook dan update status order secara idempotent.
 9. Gunakan get payment untuk fallback rekonsiliasi.

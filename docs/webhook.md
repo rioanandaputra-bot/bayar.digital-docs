@@ -90,3 +90,116 @@ Praktik yang disarankan:
 3. Validasi nominal `amount` sesuai `amount_total` order tenant.
 4. Jangan percaya status order dari browser customer.
 5. Gunakan get payment untuk verifikasi tambahan jika payload mencurigakan.
+
+## Code Examples
+
+### Node.js (Express)
+
+```javascript
+const express = require('express');
+const crypto = require('crypto');
+
+const app = express();
+app.use(express.json());
+
+const CALLBACK_SECRET = process.env.CALLBACK_SECRET; // dari dashboard
+
+app.post('/webhooks/bayar-digital', (req, res) => {
+  // 1. Verifikasi signature (jika callback_secret dikonfigurasi)
+  if (CALLBACK_SECRET) {
+    const signature = req.headers['x-signature'];
+    const payload = JSON.stringify(req.body);
+    const expected = crypto
+      .createHmac('sha256', CALLBACK_SECRET)
+      .update(payload)
+      .digest('hex');
+    if (signature !== expected) {
+      return res.status(401).json({ status: 'invalid signature' });
+    }
+  }
+
+  const { payment_code, status, amount } = req.body;
+
+  // 2. Validasi payment_code ada di sistem tenant
+  // 3. Validasi amount sesuai order
+  // 4. Update status order
+
+  // 5. Balas 200
+  res.json({ status: 'received' });
+});
+```
+
+### PHP (Laravel)
+
+```php
+use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+
+Route::post('webhooks/bayar-digital', function (Request $request) {
+    $callbackSecret = config('services.bayar-digital.callback_secret');
+
+    // 1. Verifikasi signature
+    if ($callbackSecret) {
+        $signature = $request->header('X-Signature');
+        $payload = $request->getContent();
+        $expected = hash_hmac('sha256', $payload, $callbackSecret);
+        if (!hash_equals($expected, $signature)) {
+            Log::warning('Invalid webhook signature', [
+                'expected' => $expected,
+                'received' => $signature,
+            ]);
+            return response()->json(['status' => 'invalid signature'], 401);
+        }
+    }
+
+    $data = $request->validate([
+        'payment_code' => 'required|string',
+        'status' => 'required|string|in:PENDING,PAID,EXPIRED,CANCELLED',
+        'amount' => 'required|integer',
+    ]);
+
+    // 2. Cari order berdasarkan payment_code
+    // 3. Validasi amount
+    // 4. Update status order secara idempotent
+
+    return response()->json(['status' => 'received']);
+});
+```
+
+### Python (FastAPI)
+
+```python
+from fastapi import FastAPI, Request, HTTPException
+import hmac
+import hashlib
+
+app = FastAPI()
+CALLBACK_SECRET = "..."  # dari environment
+
+@app.post("/webhooks/bayar-digital")
+async def webhook(request: Request):
+    body = await request.body()
+    signature = request.headers.get("x-signature")
+
+    # 1. Verifikasi signature
+    if CALLBACK_SECRET and signature:
+        expected = hmac.new(
+            CALLBACK_SECRET.encode(),
+            body,
+            hashlib.sha256,
+        ).hexdigest()
+        if not hmac.compare_digest(expected, signature):
+            raise HTTPException(status_code=401, detail="invalid signature")
+
+    data = await request.json()
+    payment_code = data["payment_code"]
+    status = data["status"]
+    amount = data["amount"]
+
+    # 2. Cari order berdasarkan payment_code
+    # 3. Validasi amount sesuai order
+    # 4. Update status order secara idempotent
+
+    return {"status": "received"}
+```

@@ -24,7 +24,7 @@ Tanpa worker yang aktif dan online, payment tidak akan terdeteksi walaupun custo
 
 ## Install APK
 
-Versi terbaru: **1.2**. Dapatkan APK dari operator Bayar Digital.
+Dapatkan APK versi terbaru dari operator Bayar Digital.
 
 Setelah terpasang:
 
