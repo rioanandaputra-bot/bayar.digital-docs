@@ -1,0 +1,69 @@
+:root {
+  --ifm-color-primary: #f97316;
+  --ifm-color-primary-dark: #ea580c;
+  --ifm-color-primary-darker: #c2410c;
+  --ifm-color-primary-darkest: #9a3412;
+  --ifm-color-primary-light: #fb923c;
+  --ifm-color-primary-lighter: #fdba74;
+  --ifm-color-primary-lightest: #ffedd5;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #fb923c;
+  --ifm-color-primary-dark: #f97316;
+  --ifm-color-primary-darker: #ea580c;
+  --ifm-color-primary-darkest: #c2410c;
+  --ifm-color-primary-light: #fdba74;
+  --ifm-color-primary-lighter: #fed7aa;
+  --ifm-color-primary-lightest: #ffedd5;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+.doc-markdown-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-bottom: 1.5rem;
+  padding: 0 0.5rem;
+}
+
+.doc-markdown-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid var(--ifm-color-primary);
+  text-decoration: none;
+  line-height: 1.4;
+}
+
+a.doc-markdown-btn:hover {
+  text-decoration: none;
+}
+
+.doc-markdown-btn--download {
+  background: var(--ifm-color-primary);
+  color: #fff;
+}
+
+.doc-markdown-btn--download:hover {
+  background: var(--ifm-color-primary-darker);
+  color: #fff;
+}
+
+.doc-markdown-btn--copy {
+  background: transparent;
+  color: var(--ifm-color-primary);
+}
+
+.doc-markdown-btn--copy:hover {
+  background: var(--ifm-color-primary);
+  color: #fff;
+}
