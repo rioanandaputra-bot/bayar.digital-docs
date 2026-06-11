@@ -29,7 +29,7 @@ COPY --from=build /app/build /usr/share/nginx/html
 
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 
-RUN chown -R appuser:appgroup /usr/share/nginx/html /etc/nginx/conf.d /var/cache/nginx /var/log/nginx
+RUN chown -R appuser:appgroup /usr/share/nginx/html /etc/nginx/conf.d /var/cache/nginx /var/log/nginx /var/run
 USER appuser
 
 EXPOSE 80
