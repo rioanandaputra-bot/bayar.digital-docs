@@ -9,7 +9,7 @@ Gunakan cancel payment untuk membatalkan payment yang tidak lagi dipakai oleh or
 ## Endpoint
 
 ```http
-DELETE /api/gateway/payments/{payment_code}
+DELETE /gateway/payments/{payment_code}
 X-Api-Key: pk_...
 ```
 
@@ -22,7 +22,7 @@ X-Api-Key: pk_...
 ## Contoh Request
 
 ```bash
-curl -X DELETE https://api.bayar.digital/api/gateway/payments/INV-2026-0001 \
+curl -X DELETE https://api.bayar.digital/gateway/payments/INV-2026-0001 \
   -H "X-Api-Key: pk_..."
 ```
 

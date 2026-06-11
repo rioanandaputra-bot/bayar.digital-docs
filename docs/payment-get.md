@@ -9,7 +9,7 @@ Gunakan endpoint get payment untuk melihat status payment dan melakukan rekonsil
 ## Get Payment By Code
 
 ```http
-GET /api/gateway/payments/{payment_code}
+GET /gateway/payments/{payment_code}
 X-Api-Key: pk_...
 ```
 
@@ -18,7 +18,7 @@ X-Api-Key: pk_...
 ## Contoh Request
 
 ```bash
-curl https://api.bayar.digital/api/gateway/payments/INV-2026-0001 \
+curl https://api.bayar.digital/gateway/payments/INV-2026-0001 \
   -H "X-Api-Key: pk_..."
 ```
 
@@ -54,7 +54,7 @@ curl https://api.bayar.digital/api/gateway/payments/INV-2026-0001 \
 ## List Payments
 
 ```http
-GET /api/gateway/payments?page=1&per_page=20
+GET /gateway/payments?page=1&per_page=20
 X-Api-Key: pk_...
 ```
 

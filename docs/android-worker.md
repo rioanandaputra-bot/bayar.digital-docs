@@ -4,83 +4,48 @@ sidebar_position: 3
 
 # Android Worker
 
-Android Worker adalah aplikasi perangkat tenant yang membantu Bayar Digital membaca mutasi pembayaran dari akun pembayaran tenant.
+Android Worker adalah aplikasi yang berjalan di perangkat tenant untuk membantu Bayar Digital mendeteksi pembayaran masuk.
 
-Dokumen ini hanya membahas peran worker dari sudut pandang integrasi tenant. Detail build, signing, atau konfigurasi internal Android tidak diperlukan untuk integrasi API payment gateway.
+## Cara Kerja
 
-## Fungsi Worker
+Worker membaca notifikasi atau mutasi dari akun pembayaran tenant yang terdaftar, lalu mengirim data mutasi ke Bayar Digital. Sistem Bayar Digital mencocokkan mutasi tersebut dengan payment yang dibuat tenant.
 
-Worker bertugas untuk:
+Tanpa worker yang aktif dan online, payment tidak akan terdeteksi walaupun customer sudah membayar.
 
-1. Terhubung ke akun pembayaran tenant yang sudah disetujui.
-2. Membaca notifikasi atau mutasi pembayaran dari perangkat.
-3. Mengirim data mutasi ke Bayar Digital.
-4. Membantu sistem mencocokkan mutasi dengan payment yang dibuat tenant.
-5. Memicu perubahan status payment jika pembayaran valid ditemukan.
-
-## Hubungan Dengan Payment
-
-Saat tenant membuat payment, Bayar Digital menghasilkan nominal final pada `amount_total`.
-
-```text
-amount_total = amount_original + amount_unique
-```
-
-Nilai unik ini membantu pencocokan mutasi. Customer harus membayar sesuai `amount_total`, bukan hanya `amount_original`.
-
-## Yang Perlu Dipastikan Tenant
+## Yang Perlu Tenant Lakukan
 
 | Item | Keterangan |
 | --- | --- |
-| Device aktif | Worker harus online selama tenant menerima pembayaran. |
-| Akun pembayaran aktif | Payment account harus tersedia pada endpoint `GET /api/gateway/accounts`. |
-| Notifikasi/mutasi terbaca | Worker harus dapat membaca data mutasi yang dibutuhkan. |
-| Koneksi internet stabil | Worker perlu mengirim data mutasi ke Bayar Digital. |
-| Baterai dan background access | Perangkat harus diatur agar aplikasi worker tidak dihentikan sistem. |
+| Device aktif | Worker harus online dan berjalan. |
+| Akun pembayaran aktif | Payment account tenant harus aktif di sistem. |
+| Koneksi internet stabil | Worker perlu mengirim data mutasi ke server. |
+| Baterai & background access | Setel device agar worker tidak dihentikan oleh sistem. |
+| Approval device | Hubungi operator Bayar Digital untuk approve device baru. |
 
-## Unduh APK
+## Install APK
 
-Versi terbaru Android Worker tenant: **1.2**.
+Versi terbaru: **1.2**. Dapatkan APK dari operator Bayar Digital.
 
-[Unduh APK Android Worker Tenant](https://docs.bayar.digital/apk/bayar-digital-worker-tenant.apk)
+Setelah terpasang:
 
-:::info
-Jika link download belum tersedia di environment dokumentasi yang kamu pakai, gunakan APK release yang diberikan oleh operator Bayar Digital. Jangan build APK sendiri untuk production kecuali diminta oleh operator.
-:::
+1. Pastikan perangkat memakai akun pembayaran tenant yang sesuai.
+2. Berikan permission yang dibutuhkan (notifikasi, latar belakang).
+3. Pastikan perangkat tetap online dan tidak dibatasi battery saver.
+4. Hubungi operator Bayar Digital untuk approval device jika worker belum aktif.
 
-Setelah APK terpasang:
+## Jika Worker Bermasalah
 
-1. Pastikan perangkat memakai akun/payment account tenant yang benar.
-2. Berikan permission yang dibutuhkan agar worker dapat berjalan di background.
-3. Pastikan perangkat tetap online dan tidak dibatasi oleh battery saver.
-4. Hubungi operator Bayar Digital untuk proses approval device jika worker belum aktif.
+Worker offline → payment tetap `PENDING` walau customer sudah bayar.
 
-## Changelog
+Tindakan:
 
-### v1.2
-
-Ringkasan perubahan worker tenant:
-
-1. Mendukung sinkronisasi mutasi untuk payment tenant.
-2. Menjalankan background worker untuk menjaga proses baca mutasi tetap aktif.
-3. Mendukung notifikasi Firebase Cloud Messaging untuk event worker.
-4. Menyimpan konfigurasi lokal dengan encrypted storage.
-5. Mendukung build domain `tenant` dan `platform` sesuai konfigurasi release.
-
-## Dampak Jika Worker Bermasalah
-
-Jika worker offline atau tidak membaca mutasi, payment bisa tetap berada pada status `PENDING` walaupun customer sudah membayar.
-
-Tindakan tenant:
-
-1. Pastikan perangkat worker online.
+1. Pastikan perangkat online dan tidak dalam mode hemat daya.
 2. Pastikan akun pembayaran masih aktif.
-3. Cek status payment melalui `GET /api/gateway/payments/{payment_code}`.
-4. Hubungi operator Bayar Digital jika mutasi sudah ada tetapi status belum berubah.
+3. Cek status payment via `GET /gateway/payments/{payment_code}`.
+4. Hubungi operator jika mutasi sudah masuk tapi status belum berubah.
 
 ## Praktik Operasional
 
-1. Gunakan perangkat khusus untuk worker.
-2. Jangan sering mengganti akun pembayaran tanpa koordinasi operasional.
-3. Monitor payment yang mendekati `expired_at` tetapi belum terbayar.
-4. Selalu gunakan webhook dan get payment untuk rekonsiliasi status order.
+1. Gunakan perangkat khusus untuk worker (bukan device pribadi).
+2. Monitor payment yang mendekati `expired_at` tetapi belum terbayar.
+3. Gunakan webhook dan get payment untuk rekonsiliasi status order.

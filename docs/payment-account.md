@@ -9,14 +9,14 @@ Payment account adalah akun pembayaran tenant yang bisa dipakai untuk menerima p
 ## Endpoint
 
 ```http
-GET /api/gateway/accounts
+GET /gateway/accounts
 X-Api-Key: pk_...
 ```
 
 ## Contoh Request
 
 ```bash
-curl https://api.bayar.digital/api/gateway/accounts \
+curl https://api.bayar.digital/gateway/accounts \
   -H "X-Api-Key: pk_..."
 ```
 
@@ -77,13 +77,13 @@ Gunakan account yang sesuai dengan metode bayar yang ingin ditampilkan ke custom
 
 ## Payment Account Instruction
 
-Instruksi pembayaran tidak diambil dari endpoint list account. Endpoint `GET /api/gateway/accounts` hanya dipakai untuk memilih `merchant_account_id` dan data rekening/QRIS dasar.
+Instruksi pembayaran tidak diambil dari endpoint list account. Endpoint `GET /gateway/accounts` hanya dipakai untuk memilih `merchant_account_id` dan data rekening/QRIS dasar.
 
 Untuk menampilkan instruksi pembayaran, gunakan field payment yang dikembalikan setelah tenant membuat payment atau mengambil detail payment:
 
 ```http
-POST /api/gateway/payments
-GET /api/gateway/payments/{payment_code}
+POST /gateway/payments
+GET /gateway/payments/{payment_code}
 ```
 
 Gunakan response payment untuk menampilkan instruksi ke customer, karena instruksi membutuhkan konteks payment seperti `amount_total`, batas waktu, dan account yang dipakai.

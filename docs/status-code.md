@@ -76,17 +76,36 @@ Validation error dapat menyertakan detail field:
 | `validation_error` | `400` | Field request tidak memenuhi validasi awal. | Perbaiki payload sesuai field error. |
 | `invalid_expired_at` | `400` | `expired_at` bukan epoch milliseconds valid atau tidak di masa depan. | Kirim epoch milliseconds yang benar. |
 | `invalid_request` | `400` | Request tidak memenuhi aturan bisnis, termasuk customer contact kosong atau total item tidak sesuai. | Perbaiki payload sesuai message. |
-| `account_not_owned` | `403` | `merchant_account_id` bukan milik merchant tenant. | Ambil account dari `GET /api/gateway/accounts`. |
+| `account_not_owned` | `403` | `merchant_account_id` bukan milik merchant tenant. | Ambil account dari `GET /gateway/accounts`. |
 | `no_active_quota` | `403` | Tenant tidak memiliki quota aktif. | Hubungi operator atau aktifkan quota. |
 | `unique_amount_conflict` | `409` | Sistem tidak bisa membuat nominal unik tanpa konflik. | Retry create payment dengan jeda atau gunakan order baru. |
 | `payment_code_conflict` | `409` | `payment_code` sudah dipakai merchant yang sama. | Gunakan `payment_code` unik per order. |
 | `payment_not_cancellable` | `404` | Payment tidak ditemukan atau status tidak bisa dicancel. | Cek status payment sebelum cancel. |
+| `rate_limited` | `429` | Rate limit terlampaui. | Retry dengan backoff. |
+| `forbidden` | `403` | Request tidak memiliki akses ke resource. | Periksa otorisasi request. |
+| `conflict` | `409` | Konflik data umum. | Periksa kondisi data. |
+| `internal_error` | `500` | Gangguan internal server. | Retry dengan backoff, hubungi operator jika persisten. |
 
 ## Rate Limit
 
-Gateway membatasi request tenant pada **100 request per menit** per API key.
+Gateway membatasi request tenant per **merchant** (per API key), dengan limit berbeda untuk read dan write:
 
-Jika menerima `429`, lakukan retry dengan backoff.
+| Tipe Endpoint | Default Limit | Contoh |
+| --- | --- | --- |
+| Read (`GET`) | **3.000 request per menit** | `GET /gateway/accounts`, `GET /gateway/payments` |
+| Write (`POST`, `DELETE`) | **600 request per menit** | `POST /gateway/payments`, `DELETE /gateway/payments/{code}` |
+
+Limit dapat disesuaikan oleh operator via environment variable `GATEWAY_READ_LIMIT` dan `GATEWAY_WRITE_LIMIT`.
+
+Setiap response menyertakan header rate limit:
+
+| Header | Contoh | Arti |
+| --- | --- | --- |
+| `X-RateLimit-Limit` | `3000` | Batas maksimum request dalam window. |
+| `X-RateLimit-Remaining` | `2834` | Sisa request yang tersisa. |
+| `X-RateLimit-Reset` | `42` | Detik hingga window reset. |
+
+Jika limit terlampaui, API mengembalikan `429` dengan `"code": "rate_limited"`. Tenant harus melakukan retry dengan backoff dan membaca `X-RateLimit-Reset` untuk jeda yang tepat.
 
 ```javascript
 async function requestWithBackoff(sendRequest, maxRetries = 3) {
@@ -95,7 +114,8 @@ async function requestWithBackoff(sendRequest, maxRetries = 3) {
     if (response.status !== 429) {
       return response;
     }
-    await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+    const retryAfter = parseInt(response.headers.get('X-RateLimit-Reset') || `${1000 * (attempt + 1)}`, 10);
+    await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
   }
 
   throw new Error('rate limit exceeded');

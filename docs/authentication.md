@@ -23,15 +23,25 @@ API key harus dikirim dari backend tenant. Jangan kirim API key dari browser, ap
 Contoh:
 
 ```bash
-curl https://api.bayar.digital/api/gateway/accounts \
+curl https://api.bayar.digital/gateway/accounts \
   -H "X-Api-Key: pk_..."
 ```
 
 ## Tenant API Key
 
-Endpoint `/api/gateway/*` hanya menerima API key tenant. Jika API key bukan milik tenant atau tidak terkait merchant aktif, request akan ditolak.
+Endpoint `/gateway/*` hanya menerima API key tenant. Jika API key bukan milik tenant atau tidak terkait merchant aktif, request akan ditolak.
 
-Jika header API key kosong atau tidak valid, API mengembalikan `401`:
+Jika header API key kosong, API mengembalikan `401`:
+
+```json
+{
+  "success": false,
+  "code": "unauthorized",
+  "message": "missing api key"
+}
+```
+
+Jika API key diisi tetapi tidak terdaftar, API mengembalikan `401`:
 
 ```json
 {
@@ -70,6 +80,6 @@ Praktik keamanan:
 
 ## Rate Limit
 
-Gateway menerapkan rate limit **100 request per menit** per API key.
+Gateway menerapkan rate limit **100 request per menit** per IP.
 
 Jika terkena rate limit, tenant harus melakukan retry dengan jeda dan tidak mengirim request berulang tanpa backoff.

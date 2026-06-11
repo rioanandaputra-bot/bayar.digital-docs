@@ -9,7 +9,7 @@ Gunakan endpoint ini untuk membuat payment dari order internal tenant.
 ## Endpoint
 
 ```http
-POST /api/gateway/payments
+POST /gateway/payments
 X-Api-Key: pk_...
 Content-Type: application/json
 ```
@@ -45,7 +45,7 @@ Content-Type: application/json
 
 | Field | Tipe | Required | Keterangan |
 | --- | --- | --- | --- |
-| `merchant_account_id` | UUID | Ya | ID dari `GET /api/gateway/accounts`. |
+| `merchant_account_id` | UUID | Ya | ID dari `GET /gateway/accounts`. |
 | `payment_code` | string | Ya | Kode unik dari sistem tenant, maksimal 100 karakter. |
 | `amount_original` | integer | Ya | Nominal order sebelum nominal unik. |
 | `expired_at` | integer | Ya | Waktu kedaluwarsa dalam epoch milliseconds dan harus di masa depan. |
@@ -114,7 +114,7 @@ Jangan menampilkan `amount_original` sebagai nominal yang harus dibayar jika res
 ## Contoh cURL
 
 ```bash
-curl -X POST https://api.bayar.digital/api/gateway/payments \
+curl -X POST https://api.bayar.digital/gateway/payments \
   -H "X-Api-Key: pk_..." \
   -H "Content-Type: application/json" \
   -d '{
