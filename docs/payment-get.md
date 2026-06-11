@@ -62,8 +62,14 @@ X-Api-Key: pk_...
 
 | Parameter | Tipe | Keterangan |
 | --- | --- | --- |
-| `page` | integer | Nomor halaman. Default mengikuti konfigurasi API. |
-| `per_page` | integer | Jumlah data per halaman. Nilai di luar `1..100` akan memakai default `20`. |
+| `page` | integer | Nomor halaman. Default `1`. |
+| `limit` | integer | Jumlah data per halaman. Maksimal `100`. |
+| `status` | string | Filter status payment (`PENDING`, `PAID`, `EXPIRED`, `CANCELLED`). |
+| `merchant_account_id` | UUID | Filter berdasarkan account. |
+| `start_date` | string (ISO 8601) | Filter dari tanggal ini (inklusif). |
+| `end_date` | string (ISO 8601) | Filter sampai tanggal ini (inklusif). |
+| `sort` | string | Field untuk sorting. |
+| `order` | string | `asc` atau `desc`. |
 
 ## Response List
 
@@ -75,6 +81,8 @@ X-Api-Key: pk_...
     {
       "id": "660e8400-e29b-41d4-a716-446655440010",
       "payment_code": "INV-2026-0001",
+      "amount_original": 50000,
+      "amount_unique": 123,
       "amount_total": 50123,
       "status": "PAID",
       "expires_at": "2026-10-11T12:00:00Z",
@@ -83,7 +91,7 @@ X-Api-Key: pk_...
   ],
   "meta": {
     "page": 1,
-    "per_page": 20,
+    "limit": 20,
     "total": 1,
     "total_pages": 1
   }

@@ -75,7 +75,8 @@ Minimal salah satu dari `customer_email` atau `customer_phone` wajib diisi.
 ```json
 {
   "success": true,
-  "message": "created",
+  "code": "PAYMENT_CREATED",
+  "message": "Payment created successfully",
   "data": {
     "id": "660e8400-e29b-41d4-a716-446655440010",
     "merchant_account_id": "550e8400-e29b-41d4-a716-446655440000",

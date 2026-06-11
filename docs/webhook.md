@@ -34,11 +34,11 @@ URL harus dapat diakses dari internet. Untuk production, gunakan HTTPS.
 
 ```json
 {
-  "payment_id": "660e8400-e29b-41d4-a716-446655440010",
   "payment_code": "INV-2026-0001",
   "status": "PAID",
-  "amount": 50123,
-  "paid_at": "2026-06-11T10:05:00Z"
+  "amount_total": 50123,
+  "paid_at": 1749643500000,
+  "event": "payment.status_changed"
 }
 ```
 
@@ -65,11 +65,7 @@ Jika proses update order membutuhkan waktu, simpan payload lebih dulu, balas `2x
 
 Webhook dapat dikirim lebih dari satu kali. Handler tenant harus aman dipanggil berulang.
 
-Gunakan salah satu kunci berikut untuk idempotency:
-
-1. `payment_id`
-2. `payment_code`
-3. Kombinasi `payment_code` dan `status`
+Gunakan `payment_code` sebagai kunci idempotency.
 
 Contoh aturan:
 
@@ -87,7 +83,7 @@ Praktik yang disarankan:
 
 1. Gunakan HTTPS untuk `callback_url` production.
 2. Validasi bahwa `payment_code` ada di sistem tenant.
-3. Validasi nominal `amount` sesuai `amount_total` order tenant.
+3. Validasi nominal `amount_total` sesuai order tenant.
 4. Jangan percaya status order dari browser customer.
 5. Gunakan get payment untuk verifikasi tambahan jika payload mencurigakan.
 
@@ -118,11 +114,11 @@ app.post('/webhooks/bayar-digital', (req, res) => {
     }
   }
 
-  const { payment_code, status, amount } = req.body;
+  const { payment_code, status, amount_total } = req.body;
 
   // 2. Validasi payment_code ada di sistem tenant
-  // 3. Validasi amount sesuai order
-  // 4. Update status order
+  // 3. Validasi amount_total sesuai order
+  // 4. Update status order secara idempotent
 
   // 5. Balas 200
   res.json({ status: 'received' });
@@ -156,11 +152,11 @@ Route::post('webhooks/bayar-digital', function (Request $request) {
     $data = $request->validate([
         'payment_code' => 'required|string',
         'status' => 'required|string|in:PENDING,PAID,EXPIRED,CANCELLED',
-        'amount' => 'required|integer',
+        'amount_total' => 'required|integer',
     ]);
 
     // 2. Cari order berdasarkan payment_code
-    // 3. Validasi amount
+    // 3. Validasi amount_total
     // 4. Update status order secara idempotent
 
     return response()->json(['status' => 'received']);
@@ -195,10 +191,10 @@ async def webhook(request: Request):
     data = await request.json()
     payment_code = data["payment_code"]
     status = data["status"]
-    amount = data["amount"]
+    amount_total = data["amount_total"]
 
     # 2. Cari order berdasarkan payment_code
-    # 3. Validasi amount sesuai order
+    # 3. Validasi amount_total sesuai order
     # 4. Update status order secara idempotent
 
     return {"status": "received"}

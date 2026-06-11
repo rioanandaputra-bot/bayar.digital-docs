@@ -31,8 +31,13 @@ curl -X DELETE https://api.bayar.digital/gateway/payments/INV-2026-0001 \
 ```json
 {
   "success": true,
-  "message": "ok",
-  "data": null
+  "code": "PAYMENT_CANCELLED",
+  "message": "Payment cancelled successfully",
+  "data": {
+    "payment_code": "INV-2026-0001",
+    "status": "CANCELLED",
+    "cancelled_at": "2026-06-11T12:00:00Z"
+  }
 }
 ```
 
@@ -50,7 +55,7 @@ Jika payment tidak bisa dibatalkan, API dapat mengembalikan:
 ```json
 {
   "success": false,
-  "code": "payment_not_cancellable",
+  "code": "PAYMENT_NOT_CANCELLABLE",
   "message": "payment not found or not cancellable"
 }
 ```

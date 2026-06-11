@@ -58,13 +58,13 @@ curl -X POST https://api.bayar.digital/gateway/payments \
   -H "Content-Type: application/json" \
   -H "X-Api-Key: pk_..." \
   -d '{
-    "payment_code": "INV-2026-0001",
     "merchant_account_id": "550e8400-e29b-41d4-a716-446655440000",
-    "amount": 50000,
+    "payment_code": "INV-2026-0001",
+    "amount_original": 50000,
+    "expired_at": 1791691200000,
     "customer_name": "Budi Santoso",
     "customer_email": "budi@example.com",
     "customer_phone": "081234567890",
-    "expired_at": 1791691200000,
     "callback_url": "https://tenant.example.com/webhooks/bayar-digital",
     "return_url": "https://tenant.example.com/orders/INV-2026-0001"
   }'
@@ -85,11 +85,11 @@ Saat customer membayar dan worker mendeteksi mutasi, Bayar Digital akan mengirim
 
 ```json
 {
-  "payment_id": "660e8400-e29b-41d4-a716-446655440010",
   "payment_code": "INV-2026-0001",
   "status": "PAID",
-  "amount": 50123,
-  "paid_at": "2026-06-11T10:05:00Z"
+  "amount_total": 50123,
+  "paid_at": 1749643500000,
+  "event": "payment.status_changed"
 }
 ```
 

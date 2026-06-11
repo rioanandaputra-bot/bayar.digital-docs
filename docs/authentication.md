@@ -80,11 +80,6 @@ Praktik keamanan:
 
 ## Rate Limit
 
-Gateway membatasi request tenant per **merchant** (per API key), dengan limit berbeda untuk read dan write:
+Gateway membatasi request tenant per **merchant** dengan sliding window **100 request per menit** untuk semua endpoint `/gateway/*`.
 
-| Tipe Endpoint | Limit Default |
-| --- | --- |
-| Read (`GET`) | **3.000 request per menit** |
-| Write (`POST`, `DELETE`) | **600 request per menit** |
-
-Jika limit terlampaui, API mengembalikan status `429` dengan header rate limit. Tenant harus melakukan retry dengan backoff.
+Jika limit terlampaui, API mengembalikan `429` dengan `"code": "RATE_LIMIT_EXCEEDED"`. Tenant harus melakukan retry dengan backoff dan membaca `X-RateLimit-Reset` untuk jeda yang tepat.

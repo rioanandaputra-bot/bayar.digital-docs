@@ -10,11 +10,9 @@ Panduan menangani error dari Bayar Digital API secara konsisten dan idempotent.
 
 Webhook dan beberapa error membutuhkan handler yang idempotent — aman dipanggil berulang kali.
 
-**Kunci idempotency yang bisa dipakai:**
+**Kunci idempotency:**
 
-- `payment_id` — unik per payment
 - `payment_code` — unik per order tenant
-- Kombinasi `payment_code` + `status`
 
 **Aturan dasar:**
 
@@ -81,11 +79,11 @@ def request_with_backoff(send_request, max_retries=3):
 
 | Header | Contoh | Arti |
 | --- | --- | --- |
-| `X-RateLimit-Limit` | `3000` | Batas maksimum |
-| `X-RateLimit-Remaining` | `2834` | Sisa request |
+| `X-RateLimit-Limit` | `100` | Batas maksimum |
+| `X-RateLimit-Remaining` | `83` | Sisa request |
 | `X-RateLimit-Reset` | `42` | Detik hingga window reset |
 
-Read (`GET`) dan write (`POST`/`DELETE`) punya limit terpisah. Lihat [Status Code](./status-code#rate-limit) untuk detail.
+Lihat [Status Code](./status-code#rate-limit) untuk detail.
 
 ## Duplicate payment_code
 
@@ -115,12 +113,12 @@ Jika endpoint tenant gagal menerima webhook:
 
 | Code | HTTP | Retry? | Aksi |
 | --- | --- | --- | --- |
-| `rate_limited` | `429` | Ya, dengan backoff | Baca `X-RateLimit-Reset` |
-| `internal_error` | `500` | Ya, dengan backoff | Hubungi operator jika persisten |
-| `validation_error` | `400` | Tidak | Perbaiki payload |
+| `RATE_LIMIT_EXCEEDED` | `429` | Ya, dengan backoff | Baca `X-RateLimit-Reset` |
+| `INTERNAL_ERROR` | `500` | Ya, dengan backoff | Hubungi operator jika persisten |
+| `VALIDATION_ERROR` | `400` | Tidak | Perbaiki payload |
 | `payment_code_conflict` | `409` | Tidak | Gunakan kode baru |
 | `unique_amount_conflict` | `409` | Ya, dengan jeda | Retry atau gunakan order baru |
-| `payment_not_cancellable` | `404` | Tidak | Cek status payment |
+| `PAYMENT_NOT_CANCELLABLE` | `409` | Tidak | Cek status payment |
 | `account_not_owned` | `403` | Tidak | Ambil account dari `GET /gateway/accounts` |
 
 Lihat [Status Code](./status-code) untuk daftar lengkap.

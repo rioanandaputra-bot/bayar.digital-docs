@@ -4,7 +4,17 @@ sidebar_position: 7
 
 # Checkout
 
-Halaman checkout adalah halaman Bayar Digital yang ditampilkan ke customer untuk melakukan pembayaran.
+Halaman checkout adalah halaman publik Bayar Digital yang ditampilkan ke customer untuk melakukan pembayaran. Customer tidak perlu login.
+
+## URL
+
+`checkout_url` dikembalikan saat create payment dengan format:
+
+```
+/checkout/{payment_id}
+```
+
+URL lengkap di production: `https://pay.bayar.digital/checkout/{payment_id}`.
 
 ## Alur Checkout
 
@@ -14,7 +24,7 @@ Halaman checkout adalah halaman Bayar Digital yang ditampilkan ke customer untuk
 4. Customer membayar sesuai instruksi.
 5. Android Worker mendeteksi pembayaran masuk.
 6. Status payment berubah menjadi `PAID`.
-7. Customer diarahkan ke `return_url`.
+7. Customer otomatis diarahkan ke `return_url`.
 
 ```mermaid
 sequenceDiagram
@@ -26,42 +36,73 @@ sequenceDiagram
     T->>B: POST /gateway/payments
     B-->>T: checkout_url
     T->>C: Redirect ke checkout_url
-    C->>B: Lihat instruksi bayar
+    C->>B: GET /checkout/:id
+    B-->>C: Detail payment + instruksi bayar
     C->>C: Bayar via bank / QRIS
-    W->>B: Deteksi mutasi masuk
-    B->>B: Cocokkan dengan payment
-    B->>T: Webhook status PAID
-    B->>C: Redirect ke return_url (jika ada)
-    T->>T: Update order sebagai lunas
+    W->>B: POST /worker/tenant/mutations
+    B->>B: Cocokkan mutasi dengan payment
+    B->>T: Webhook payment.status_changed
+    B-->>C: Socket.IO checkout:event
+    C->>C: Redirect ke return_url
+    T->>C: Tampilkan order lunas
 ```
 
 ## Yang Customer Lihat
 
-Halaman checkout menampilkan:
+### Status PENDING
 
-- **Nominal**: `amount_total` yang harus dibayar (amount + unique code)
-- **Metode bayar**: tergantung account yang dipilih tenant
-  - **Transfer bank**: nama bank, nomor rekening, nama penerima
-  - **QRIS**: kode QR yang bisa discan
-- **Batas waktu**: countdown hingga `expires_at`
-- **Status**: menunggu pembayaran, sudah dibayar, atau expired
+- **Nominal**: `amount_total` dalam format IDR (amount + unique code)
+- **Metode bayar** (tergantung account yang dipilih tenant):
+  - **Transfer bank**: logo bank, nomor rekening (monospace + tombol copy), nama penerima
+  - **QRIS**: QR code dinamis (QRIS payload dengan amount_total spesifik), merchant name, NMID
+- **Informasi customer**: nama, email, nomor telepon
+- **Daftar item** (jika `order_items` dikirim saat create payment): nama, qty, harga, gambar
+- **Rincian**: `amount_original`, unique code (`+Rp XXX`), `amount_total`
+- **Batas waktu**: tanggal dan jam kedaluwarsa (format `dd/MM/yyyy HH:mm`)
+- **Petunjuk bayar**: langkah-langkah terjemahan dari konfigurasi channel
+
+### Status PAID
+
+- Centang hijau "Payment completed"
+- Waktu pembayaran (`paid_at`)
+- Tombol "Back to Merchant" (redirect ke `return_url`)
+
+### Status EXPIRED / CANCELLED
+
+- Teks merah "This payment is no longer available"
+
+## Status Polling
+
+Halaman checkout menggunakan **2 mekanisme** untuk update status:
+
+1. **WebSocket (Socket.IO)** — real-time push event `checkout:event` saat status berubah. Terhubung ke server yang sama dengan path `/socket.io/`.
+2. **HTTP Polling** — fallback setiap **5 detik** via `GET /checkout/:id`. Berhenti saat status tidak `PENDING`.
+
+WebSocket adalah jalur utama. HTTP polling adalah safety net jika WebSocket gagal.
 
 ## return_url
 
-Saat membuat payment, tenant dapat mengirim `return_url`. URL ini adalah tujuan customer setelah menyelesaikan pembayaran:
+Saat membuat payment, tenant dapat mengirim `return_url`. URL ini adalah tujuan customer setelah pembayaran sukses:
 
-- Jika customer menutup halaman checkout sebelum dibayar → customer tidak sampai ke `return_url`
-- Jika payment sudah `PAID` pada saat checkout → customer otomatis diarahkan ke `return_url`
-- Tenant harus memverifikasi status payment via webhook, **bukan** hanya dari redirect customer
+- Customer otomatis diarahkan ke `return_url` saat status berubah dari `PENDING` ke `PAID`.
+- Parameter `?payment_code={payment_code}` otomatis ditambahkan ke URL agar tenant bisa mengidentifikasi payment.
+- Redirect hanya terjadi sekali (dicegah double-redirect).
+- Tenant harus memverifikasi status payment via webhook, **bukan** hanya dari redirect customer.
+- URL divalidasi: hanya `https:` yang diizinkan. Protokol berbahaya seperti `javascript:` diblokir.
 
 ## Expired Checkout
 
 Jika payment melewati `expires_at`:
 
 1. Halaman checkout menampilkan status expired.
-2. Customer tidak bisa lanjut membayar.
-3. Tenant harus membuat payment baru jika order masih perlu dibayar.
-4. Jangan arahkan customer ke `checkout_url` lama.
+2. Status polling berhenti.
+3. Customer tidak bisa lanjut membayar.
+4. Tenant harus membuat payment baru jika order masih perlu dibayar.
+5. Jangan arahkan customer ke `checkout_url` lama.
+
+## QRIS Dinamis
+
+Untuk payment QRIS, checkout menampilkan QR code yang **dinamis** — payload QRIS di-generate dengan `amount_total` spesifik untuk payment ini. Customer cukup scan dan nominal sudah terisi otomatis.
 
 ## Best Practices
 

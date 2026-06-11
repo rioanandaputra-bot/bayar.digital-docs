@@ -29,22 +29,28 @@ curl https://api.bayar.digital/gateway/accounts \
   "data": [
     {
       "id": "550e8400-e29b-41d4-a716-446655440000",
-      "channel_id": "550e8400-e29b-41d4-a716-446655440010",
       "account_number": "1234567890",
       "account_name": "PT Tenant Contoh",
       "bank_name": "Bank BCA",
-      "bank_type": "TRANSFER"
+      "bank_type": "TRANSFER",
+      "channel_name": "BCA",
+      "channel_code": "bca",
+      "channel_type": "bank_transfer",
+      "is_active": true
     },
     {
       "id": "550e8400-e29b-41d4-a716-446655440001",
-      "channel_id": "550e8400-e29b-41d4-a716-446655440011",
       "qris_id": "QRIS-001",
       "qris_name": "PT Tenant Contoh",
       "qris_city": "Jakarta",
       "qris_postal_code": "10110",
       "qris_static": "00020101021126690012...",
       "bank_name": "QRIS",
-      "bank_type": "QRIS"
+      "bank_type": "QRIS",
+      "channel_name": "QRIS",
+      "channel_code": "qris",
+      "channel_type": "qris",
+      "is_active": true
     }
   ]
 }
@@ -55,16 +61,19 @@ curl https://api.bayar.digital/gateway/accounts \
 | Field | Keterangan |
 | --- | --- |
 | `id` | Account ID. Gunakan sebagai `merchant_account_id` saat create payment. |
-| `channel_id` | ID channel pembayaran. |
 | `account_number` | Nomor rekening untuk channel transfer. |
 | `account_name` | Nama pemilik rekening. |
+| `bank_name` | Nama bank atau channel pembayaran. |
+| `bank_type` | Jenis channel, misalnya `TRANSFER` atau `QRIS`. |
+| `channel_name` | Nama channel dari referensi bank. |
+| `channel_code` | Kode channel. |
+| `channel_type` | Tipe channel internal (`bank_transfer`, `qris`, dll). |
+| `is_active` | Status aktif account. |
 | `qris_id` | ID QRIS jika account memakai QRIS. |
 | `qris_name` | Nama merchant pada QRIS. |
 | `qris_city` | Kota merchant QRIS. |
 | `qris_postal_code` | Kode pos merchant QRIS. |
 | `qris_static` | Payload QRIS statis. |
-| `bank_name` | Nama bank atau channel pembayaran. |
-| `bank_type` | Jenis channel, misalnya `TRANSFER` atau `QRIS`. |
 
 ## Memilih Account
 
@@ -79,16 +88,14 @@ Gunakan account yang sesuai dengan metode bayar yang ingin ditampilkan ke custom
 
 Instruksi pembayaran tidak diambil dari endpoint list account. Endpoint `GET /gateway/accounts` hanya dipakai untuk memilih `merchant_account_id` dan data rekening/QRIS dasar.
 
-Untuk menampilkan instruksi pembayaran, gunakan field payment yang dikembalikan setelah tenant membuat payment atau mengambil detail payment:
+Untuk menampilkan instruksi pembayaran, gunakan response dari create payment atau get payment:
 
 ```http
 POST /gateway/payments
 GET /gateway/payments/{payment_code}
 ```
 
-Gunakan response payment untuk menampilkan instruksi ke customer, karena instruksi membutuhkan konteks payment seperti `amount_total`, batas waktu, dan account yang dipakai.
-
-Contoh field yang tersedia dari response payment gateway:
+Response payment mengandung field `bank_name`, `bank_type`, `account_number`, `account_name` yang bisa dipakai untuk menyusun instruksi:
 
 ```json
 {
@@ -110,4 +117,4 @@ Contoh field yang tersedia dari response payment gateway:
 }
 ```
 
-Gateway tenant saat ini tidak mengembalikan field `instructions` terstruktur. Jika tenant menampilkan instruksi sendiri, susun instruksi dari field payment di atas dan pastikan nominal yang ditampilkan adalah `amount_total`, bukan `amount_original`.
+Pastikan nominal yang ditampilkan adalah `amount_total`, bukan `amount_original`.
