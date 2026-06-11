@@ -20,21 +20,13 @@ RUN bun run build
 
 FROM nginx:1-alpine
 
-RUN addgroup -g 1001 -S appgroup && \
-    adduser -u 1001 -S appuser -G appgroup
-
-RUN rm -rf /usr/share/nginx/html/*
+RUN apk add --no-cache bash && rm -rf /usr/share/nginx/html/*
 
 COPY --from=build /app/build /usr/share/nginx/html
 
-COPY nginx.conf /etc/nginx/templates/default.conf.template
-
-RUN chown -R appuser:appgroup /usr/share/nginx/html /etc/nginx/conf.d /var/cache/nginx /var/log/nginx /var/run
-USER appuser
-
-EXPOSE 80
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
+  CMD nginx -t || exit 1
 
-CMD ["nginx", "-g", "daemon off;"]
+EXPOSE 80
