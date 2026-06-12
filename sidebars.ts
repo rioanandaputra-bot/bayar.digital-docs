@@ -12,7 +12,7 @@ const sidebars: SidebarsConfig = {
     {type: 'doc', id: 'webhook', label: 'Webhook'},
     {type: 'doc', id: 'payment-get', label: 'Payment Get'},
     {type: 'doc', id: 'payment-cancel', label: 'Payment Cancel'},
-    {type: 'doc', id: 'status-code', label: 'Status Code'},
+    {type: 'doc', id: 'status-code', label: 'Status & Error Code'},
     {type: 'doc', id: 'error-handling', label: 'Error Handling'},
   ],
 };

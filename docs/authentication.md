@@ -1,85 +1,47 @@
 ---
-sidebar_position: 2
+sidebar_position: 3
 ---
 
 # Authentication
 
-Semua endpoint gateway tenant wajib memakai API key melalui header `X-Api-Key`.
-
-```http
-X-Api-Key: pk_...
-Content-Type: application/json
-```
-
-API key harus dikirim dari backend tenant. Jangan kirim API key dari browser, aplikasi mobile customer, atau source code frontend.
-
-## Header Request
-
-| Header | Required | Keterangan |
-| --- | --- | --- |
-| `X-Api-Key` | Ya | API key tenant untuk merchant yang mengakses gateway. |
-| `Content-Type` | Ya untuk body JSON | Gunakan `application/json`. |
-
-Contoh:
+Semua endpoint `/gateway/*` membutuhkan API key via header.
 
 ```bash
 curl https://api.bayar.digital/gateway/accounts \
   -H "X-Api-Key: pk_..."
 ```
 
-## Tenant API Key
+## Setup
 
-Endpoint `/gateway/*` hanya menerima API key tenant. Jika API key bukan milik tenant atau tidak terkait merchant aktif, request akan ditolak.
-
-Jika header API key kosong, API mengembalikan `401`:
-
-```json
-{
-  "success": false,
-  "code": "unauthorized",
-  "message": "missing api key"
-}
-```
-
-Jika API key diisi tetapi tidak terdaftar, API mengembalikan `401`:
-
-```json
-{
-  "success": false,
-  "code": "unauthorized",
-  "message": "invalid api key"
-}
-```
-
-Jika API key valid tetapi bukan API key tenant gateway, API mengembalikan `403`:
-
-```json
-{
-  "success": false,
-  "code": "tenant_api_key_required",
-  "message": "tenant api key required"
-}
-```
-
-## Penyimpanan API Key
-
-Simpan API key di environment backend tenant.
+Simpan API key di environment variable backend kamu:
 
 ```bash
 BAYAR_DIGITAL_API_KEY=pk_...
 BAYAR_DIGITAL_BASE_URL=https://api.bayar.digital
 ```
 
-Praktik keamanan:
+:::warning
+API key hanya boleh dipakai dari backend. Jangan expose di frontend, mobile app, atau repository.
+:::
 
-1. Jangan commit API key ke repository.
-2. Jangan expose API key di response API tenant.
-3. Jangan gunakan API key di JavaScript frontend.
-4. Rotasi API key jika ada indikasi bocor.
-5. Pisahkan API key production dan development.
+## Error Response
+
+| Kondisi | HTTP | Code |
+| --- | --- | --- |
+| Header `X-Api-Key` kosong | `401` | `unauthorized` |
+| API key tidak valid | `401` | `unauthorized` |
+| API key bukan milik tenant | `403` | `tenant_api_key_required` |
 
 ## Rate Limit
 
-Gateway membatasi request tenant per **merchant** dengan sliding window **100 request per menit** untuk semua endpoint `/gateway/*`.
+**100 request/menit** per merchant untuk semua endpoint `/gateway/*`.
 
-Jika limit terlampaui, API mengembalikan `429` dengan `"code": "RATE_LIMIT_EXCEEDED"`. Tenant harus melakukan retry dengan backoff dan membaca `X-RateLimit-Reset` untuk jeda yang tepat.
+Header response:
+
+| Header | Keterangan |
+| --- | --- |
+| `X-RateLimit-Limit` | Batas maksimum |
+| `X-RateLimit-Remaining` | Sisa request |
+| `X-RateLimit-Reset` | Detik sampai reset |
+
+Jika limit terlampaui → HTTP `429` dengan code `RATE_LIMIT_EXCEEDED`. Tunggu sesuai `X-RateLimit-Reset` sebelum retry.

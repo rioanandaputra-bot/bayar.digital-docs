@@ -4,54 +4,24 @@ sidebar_position: 2
 
 # Quickstart
 
-Dapatkan payment pertama terverifikasi dalam 30 menit.
+Payment pertama terverifikasi dalam 30 menit.
 
-## Arus End-to-End
+## Persiapan
 
-```mermaid
-sequenceDiagram
-    participant Tenant as Server Tenant
-    participant API as Bayar Digital API
-    participant Dashboard as Dashboard
-    participant Worker as Android Worker
+1. Daftar dan login ke [dashboard](https://bayar.digital)
+2. Buat merchant → salin **API Key** (`pk_...`)
+3. Setup Android Worker di perangkat khusus ([detail](./android-worker))
 
-    Note over Tenant,Worker: 1. Persiapan
-    Tenant->>Dashboard: Daftar & buat merchant
-    Dashboard-->>Tenant: API Key (pk_...)
-    Tenant->>Dashboard: Setup Android Worker
-    Dashboard-->>Tenant: Download APK + approval device
-    Worker-->>API: Worker online, siap baca mutasi
-
-    Note over Tenant,Worker: 2. Integrasi
-    Tenant->>API: GET /gateway/accounts
-    API-->>Tenant: Daftar payment account
-    Tenant->>API: POST /gateway/payments
-    API-->>Tenant: Payment detail + checkout_url
-    Tenant->>Tenant: Redirect customer ke checkout_url
-```
-
-## Langkah 1 — Persiapan Akun
-
-1. Hubungi operator Bayar Digital untuk mendapat akses dashboard.
-2. Di dashboard, buat atau aktifkan **merchant tenant**.
-3. Dari halaman merchant, salin **API key** (format `pk_...`). Simpan aman — ini kredensial utama integrasi.
-4. Daftarkan perangkat Android untuk **Android Worker**.
-5. Instal APK worker di perangkat yang khusus dipakai untuk worker.
-
-## Langkah 2 — Dapatkan Payment Account
-
-Worker sudah online. Sekarang ambil daftar akun pembayaran yang bisa dipakai.
+## Step 1 — Ambil Payment Account
 
 ```bash
 curl https://api.bayar.digital/gateway/accounts \
   -H "X-Api-Key: pk_..."
 ```
 
-Response berisi daftar akun transfer dan QRIS. Pilih satu, catat `id` sebagai `merchant_account_id`.
+Catat `id` dari account yang ingin dipakai sebagai `merchant_account_id`.
 
-## Langkah 3 — Buat Payment
-
-Buat payment pertama dengan `payment_code` dari sistem tenant:
+## Step 2 — Buat Payment
 
 ```bash
 curl -X POST https://api.bayar.digital/gateway/payments \
@@ -65,23 +35,20 @@ curl -X POST https://api.bayar.digital/gateway/payments \
     "customer_name": "Budi Santoso",
     "customer_email": "budi@example.com",
     "customer_phone": "081234567890",
-    "callback_url": "https://tenant.example.com/webhooks/bayar-digital",
-    "return_url": "https://tenant.example.com/orders/INV-2026-0001"
+    "callback_url": "https://yourserver.com/webhooks/bayar",
+    "return_url": "https://yourserver.com/orders/INV-2026-0001"
   }'
 ```
 
-Response berisi detail payment termasuk `checkout_url`.
+Response berisi `checkout_url` dan `amount_total`.
 
-## Langkah 4 — Arahkan Customer
+## Step 3 — Redirect Customer
 
-Redirect customer ke `checkout_url` atau tampilkan instruksi bayar dari detail payment:
+Arahkan customer ke `checkout_url`. Halaman checkout menampilkan instruksi pembayaran (transfer bank atau QRIS).
 
-- Nomor rekening + nominal → untuk transfer bank
-- QRIS static → scan QRIS
+## Step 4 — Terima Webhook
 
-## Langkah 5 — Terima Webhook
-
-Saat customer membayar dan worker mendeteksi mutasi, Bayar Digital akan mengirim webhook ke `callback_url`:
+Saat pembayaran terdeteksi, server kamu menerima POST ke `callback_url`:
 
 ```json
 {
@@ -93,20 +60,22 @@ Saat customer membayar dan worker mendeteksi mutasi, Bayar Digital akan mengirim
 }
 ```
 
-Balas dengan `200 OK` dan update order tenant sebagai lunas.
+Balas `200 OK` dan update order kamu sebagai lunas.
 
-## Langkah 6 — Verifikasi (Opsional)
+## Step 5 — Verifikasi (Opsional)
 
-Gunakan `GET /gateway/payments/{payment_code}` untuk rekonsiliasi jika webhook tidak diterima.
+Jika webhook belum diterima, cek manual:
 
-## Selesai
+```bash
+curl https://api.bayar.digital/gateway/payments/INV-2026-0001 \
+  -H "X-Api-Key: pk_..."
+```
 
-Payment pertama sudah terverifikasi. Untuk pengembangan lebih lanjut:
+## Selanjutnya
 
-| Topik | Tujuan |
+| Halaman | Isi |
 | --- | --- |
-| [Overview](./overview) | Memahami arsitektur gateway secara keseluruhan |
-| [Checkout](./checkout) | Pengalaman customer dari checkout sampai bayar |
-| [Webhook](./webhook) | Implementasi callback handler yang idempotent |
-| [Error Handling](./error-handling) | Pola retry, backoff, dan penanganan error |
-| [Status Code](./status-code) | Referensi lengkap kode error dan HTTP status |
+| [Authentication](./authentication) | Setup API key |
+| [Payment Create](./payment-create) | Detail lengkap field request & response |
+| [Webhook](./webhook) | Implementasi webhook handler |
+| [Error Handling](./error-handling) | Retry, backoff, error code |
