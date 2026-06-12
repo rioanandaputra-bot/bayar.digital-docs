@@ -16,7 +16,7 @@ Aplikasi Android yang berjalan di perangkat tenant untuk mendeteksi pembayaran m
 
 ## Install & Aktivasi
 
-[Download APK Worker v1.0](https://github.com/rioanandaputra-bot/bayar.digital-docs/releases/download/v1.0.1/bayar.digital-worker-android-v1.0.1.apk)
+[Download APK Worker v1.0](https://github.com/rioanandaputra-bot/bayar.digital-docs/releases/download/v1.0.0/bayar.digital-worker-android-v1.0.0.apk)
 
 1. Install APK di perangkat khusus
 2. Buka app → masukkan API Key (`pk_...`)
