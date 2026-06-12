@@ -12,12 +12,12 @@ sidebar_position: 11
 | `201` | Created (create payment) |
 | `400` | Bad request / validation error |
 | `401` | API key kosong atau tidak valid |
-| `402` | Quota habis |
 | `403` | Tidak punya akses |
 | `404` | Tidak ditemukan |
 | `409` | Conflict (duplicate, cancel gagal) |
 | `429` | Rate limit |
 | `500` | Server error |
+| `503` | Dependency sementara tidak tersedia |
 
 ## Status Payment
 
@@ -32,23 +32,21 @@ sidebar_position: 11
 
 | Code | HTTP | Penyebab | Solusi |
 | --- | --- | --- | --- |
-| `UNAUTHORIZED` | 401 | API key kosong/invalid | Kirim `X-Api-Key` yang benar |
-| `FORBIDDEN` | 403 | API key bukan tenant | Gunakan API key tenant |
-| `BAD_REQUEST` | 400 | JSON tidak valid | Perbaiki format JSON |
-| `VALIDATION_ERROR` | 400 | Field tidak valid | Cek `errors` object di response |
-| `INVALID_AMOUNT` | 400 | `amount_original` < 1000 | Naikkan nominal |
-| `INVALID_EXPIRY_DATE` | 400 | `expired_at` bukan epoch ms atau sudah lewat | Kirim epoch ms di masa depan |
-| `INVALID_EMAIL` | 400 | Format email salah | Perbaiki `customer_email` |
-| `INVALID_CALLBACK_URL` | 400 | URL tidak valid/localhost | Gunakan URL publik |
-| `MERCHANT_ACCOUNT_INACTIVE` | 400 | Account tidak aktif | Aktifkan di dashboard |
-| `PAYMENT_NOT_FOUND` | 404 | Payment tidak ada | Cek `payment_code` |
-| `account_not_owned` | 403 | Account bukan milik merchant | Ambil dari `GET /gateway/accounts` |
-| `no_active_quota` | 402 | Quota habis | Top up quota di dashboard |
+| `unauthorized` | 401 | API key kosong/invalid | Kirim `X-Api-Key` yang benar |
+| `tenant_api_key_required` | 403 | API key bukan tenant gateway | Gunakan API key merchant tenant |
+| `bad_request` | 400 | JSON/body tidak valid | Perbaiki format request |
+| `validation_error` | 400 | Field tidak valid | Cek `errors` object di response |
+| `invalid_expired_at` | 400 | `expired_at` bukan epoch ms valid atau sudah lewat | Kirim epoch ms di masa depan |
+| `invalid_request` | 400 | Request tidak lolos validasi bisnis | Cek email/phone, order items, total, callback URL |
+| `not_found` | 404 | Payment/checkout tidak ditemukan | Cek ID atau `payment_code` |
+| `account_not_owned` | 403 | Account bukan milik merchant | Ambil account dari `GET /gateway/accounts` |
+| `no_active_quota` | 403 | Quota habis/tidak aktif | Top up quota di dashboard |
 | `payment_code_conflict` | 409 | `payment_code` sudah dipakai | Gunakan kode unik |
 | `unique_amount_conflict` | 409 | Gagal buat nominal unik | Retry setelah beberapa detik |
-| `PAYMENT_NOT_CANCELLABLE` | 409 | Payment bukan PENDING | Cek status sebelum cancel |
-| `RATE_LIMIT_EXCEEDED` | 429 | Terlalu banyak request | Tunggu `X-RateLimit-Reset` detik |
-| `INTERNAL_ERROR` | 500 | Server error | Retry dengan backoff |
+| `payment_not_cancellable` | 404 | Payment bukan `PENDING` atau tidak ditemukan | Cek status sebelum cancel |
+| `rate_limited` | 429 | Terlalu banyak request | Tunggu `X-RateLimit-Reset` detik |
+| `internal_error` | 500 | Server error | Retry dengan backoff |
+| `error` | 503 | Redis/dependency rate limiter tidak tersedia | Retry beberapa saat kemudian |
 
 ## Error Handling
 
@@ -79,6 +77,8 @@ function callAPI(callable $request, int $maxRetries = 3): array {
 ```
 
 ```python
+import time
+
 def call_api(request, max_retries=3):
     for i in range(max_retries + 1):
         res = request()

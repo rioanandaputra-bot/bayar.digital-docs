@@ -35,7 +35,7 @@ BAYAR_DIGITAL_BASE_URL=https://api.bayar.digital
 | API key tidak valid | `401` | `unauthorized` |
 | API key bukan milik tenant | `403` | `tenant_api_key_required` |
 
-**Rate limit:** 100 request/menit per merchant untuk semua endpoint `/gateway/*`. Jika limit terlampaui → `429 RATE_LIMIT_EXCEEDED`. Tunggu sesuai header `X-RateLimit-Reset`.
+**Rate limit:** 100 request/menit per merchant untuk semua endpoint `/gateway/*`. Jika limit terlampaui → `429` dengan code `rate_limited`. Tunggu sesuai header `X-RateLimit-Reset`.
 
 ## Cara Kerja
 
@@ -49,9 +49,9 @@ sequenceDiagram
     T->>API: 1. GET /gateway/accounts
     API-->>T: Daftar payment account
     T->>API: 2. POST /gateway/payments
-    API-->>T: Payment + checkout_url
-     T->>C: 3. Redirect ke checkout_url (opsional)
-     C->>C: 4. Bayar (transfer / QRIS)
+    API-->>T: Payment detail + checkout_url
+    T->>C: 3. Tampilkan instruksi bayar / redirect opsional
+    C->>C: 4. Bayar (transfer / QRIS)
     W->>API: 5. Deteksi pembayaran
     API->>T: 6. Webhook → status PAID
 ```

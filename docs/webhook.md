@@ -20,11 +20,11 @@ Kirim `callback_url` saat create payment:
 
 ```json
 {
+  "payment_id": "660e8400-e29b-41d4-a716-446655440010",
   "payment_code": "INV-2026-0001",
   "status": "PAID",
-  "amount_total": 50123,
-  "paid_at": 1749643500000,
-  "event": "payment.status_changed"
+  "amount": 50123,
+  "paid_at": "2026-06-11T10:05:00Z"
 }
 ```
 
@@ -42,7 +42,7 @@ Signature = HMAC-SHA256 dari raw JSON body menggunakan `callback_secret`.
 
 1. Verifikasi signature (jika pakai `callback_secret`)
 2. Validasi `payment_code` ada di sistem kamu
-3. Validasi `amount_total` sesuai order
+3. Validasi `amount` sesuai `amount_total` order
 4. Update status order secara **idempotent**
 5. Balas `200 OK`
 
@@ -77,7 +77,7 @@ app.post('/webhooks/bayar', express.json(), (req, res) => {
     }
   }
 
-  const { payment_code, status, amount_total } = req.body;
+  const { payment_id, payment_code, status, amount } = req.body;
 
   // Cari order, validasi amount, update status idempotent
 
@@ -101,7 +101,7 @@ Route::post('webhooks/bayar', function (Request $request) {
     $data = $request->validate([
         'payment_code' => 'required|string',
         'status' => 'required|in:PENDING,PAID,EXPIRED,CANCELLED',
-        'amount_total' => 'required|integer',
+        'amount' => 'required|integer',
     ]);
 
     // Cari order, validasi amount, update status idempotent
