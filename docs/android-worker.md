@@ -24,7 +24,7 @@ Tanpa worker yang aktif dan online, payment tidak akan terdeteksi walaupun custo
 
 ## Install APK
 
-Dapatkan APK versi terbaru dari operator Bayar Digital.
+[Download APK Worker v1.0](/downloads/bayar-digital-worker-latest-tenant.apk)
 
 Setelah terpasang, buka aplikasi dan ikuti langkah berikut:
 
