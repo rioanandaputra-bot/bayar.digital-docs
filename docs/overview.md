@@ -20,6 +20,23 @@ Semua endpoint gateway menggunakan prefix `/gateway/`.
 2. Buat merchant → salin **API Key** (`pk_...`)
 3. Setup Android Worker di perangkat khusus ([detail](./android-worker))
 
+## Authentication
+
+Kirim API key via header `X-Api-Key` di setiap request. Simpan di environment variable backend, jangan expose di frontend atau repository.
+
+```bash
+BAYAR_DIGITAL_API_KEY=pk_...
+BAYAR_DIGITAL_BASE_URL=https://api.bayar.digital
+```
+
+| Kondisi | HTTP | Code |
+| --- | --- | --- |
+| Header kosong | `401` | `unauthorized` |
+| API key tidak valid | `401` | `unauthorized` |
+| API key bukan milik tenant | `403` | `tenant_api_key_required` |
+
+**Rate limit:** 100 request/menit per merchant untuk semua endpoint `/gateway/*`. Jika limit terlampaui → `429 RATE_LIMIT_EXCEEDED`. Tunggu sesuai header `X-RateLimit-Reset`.
+
 ## Cara Kerja
 
 ```mermaid
@@ -33,8 +50,8 @@ sequenceDiagram
     API-->>T: Daftar payment account
     T->>API: 2. POST /gateway/payments
     API-->>T: Payment + checkout_url
-    T->>C: 3. Redirect ke checkout_url
-    C->>C: 4. Bayar (transfer / QRIS)
+     T->>C: 3. Redirect ke checkout_url (opsional)
+     C->>C: 4. Bayar (transfer / QRIS)
     W->>API: 5. Deteksi pembayaran
     API->>T: 6. Webhook → status PAID
 ```
@@ -42,8 +59,8 @@ sequenceDiagram
 **Singkatnya:**
 
 1. Ambil daftar payment account → pilih `merchant_account_id`
-2. Buat payment → dapat `checkout_url` + `amount_total`
-3. Redirect customer ke checkout
+2. Buat payment → dapat `amount_total` + detail pembayaran
+3. Tampilkan instruksi bayar di UI kamu sendiri (**atau** redirect ke `checkout_url` jika mau)
 4. Customer bayar
 5. Android Worker otomatis deteksi pembayaran
 6. Kamu terima webhook → update order
