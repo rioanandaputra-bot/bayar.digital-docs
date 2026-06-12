@@ -24,7 +24,7 @@ Tanpa worker yang aktif dan online, payment tidak akan terdeteksi walaupun custo
 
 ## Install APK
 
-[Download APK Worker v1.0](https://github.com/rioanandaputra-bot/bayar.digital-docs/releases/download/v1.0.0/bayar-digital-worker-latest-tenant.apk)
+[Download APK Worker v1.0](https://github.com/rioanandaputra-bot/bayar.digital-docs/releases/download/v1.0.0/bayar.digital-worker-android-v1.0.0-tenant.apk)
 
 Setelah terpasang, buka aplikasi dan ikuti langkah berikut:
 
