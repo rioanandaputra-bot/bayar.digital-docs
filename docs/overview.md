@@ -14,6 +14,12 @@ https://api.bayar.digital
 
 Semua endpoint gateway menggunakan prefix `/gateway/`.
 
+## Persiapan
+
+1. Daftar dan login ke [dashboard](https://bayar.digital)
+2. Buat merchant → salin **API Key** (`pk_...`)
+3. Setup Android Worker di perangkat khusus ([detail](./android-worker))
+
 ## Cara Kerja
 
 ```mermaid

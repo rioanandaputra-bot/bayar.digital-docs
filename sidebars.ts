@@ -3,7 +3,6 @@ import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 const sidebars: SidebarsConfig = {
   docsSidebar: [
     {type: 'doc', id: 'overview', label: 'Overview'},
-    {type: 'doc', id: 'quickstart', label: 'Quickstart'},
     {type: 'doc', id: 'authentication', label: 'Authentication'},
     {type: 'doc', id: 'android-worker', label: 'Android Worker'},
     {type: 'doc', id: 'payment-account', label: 'Payment Account'},
