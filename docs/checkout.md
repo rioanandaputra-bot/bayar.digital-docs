@@ -9,10 +9,10 @@ Halaman publik Bayar Digital untuk customer melakukan pembayaran. Customer tidak
 ## URL
 
 ```
-https://pay.bayar.digital/checkout/{payment_id}
+https://bayar.digital/checkout/{payment_id}
 ```
 
-`checkout_url` dikembalikan saat create payment dalam format `/checkout/{payment_id}`.
+`payment_checkout_url` dikembalikan saat create payment sebagai URL absolut penuh (contoh: `https://bayar.digital/checkout/{payment_id}`).
 
 ## Alur
 
