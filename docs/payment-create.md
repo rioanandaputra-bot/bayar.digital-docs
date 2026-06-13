@@ -71,6 +71,7 @@ Content-Type: application/json
   "message": "created",
   "data": {
     "payment_id": "660e8400-e29b-41d4-a716-446655440010",
+    "channel_id": "330e8400-e29b-41d4-a716-446655440000",
     "account_id": "550e8400-e29b-41d4-a716-446655440000",
     "payment_code": "INV-2026-0001",
     "payment_amount": 50000,
@@ -95,7 +96,6 @@ Content-Type: application/json
     ],
     "account_number": "1234567890",
     "account_name": "PT Tenant Contoh",
-    "channel_id": "330e8400-e29b-41d4-a716-446655440000",
     "channel_name": "Bank Central Asia",
     "channel_type": "TRANSFER",
     "channel_instructions": []
