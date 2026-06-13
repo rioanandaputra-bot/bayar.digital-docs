@@ -98,8 +98,7 @@ Content-Type: application/json
     "channel_id": "330e8400-e29b-41d4-a716-446655440000",
     "channel_name": "Bank Central Asia",
     "channel_type": "TRANSFER",
-    "qris_image": null,
-    "payment_instructions": []
+    "channel_instructions": []
   }
 }
 ```
@@ -118,4 +117,4 @@ payment_total = payment_amount + payment_unique
 
 Setelah create payment, simpan minimal:
 
-- `payment_id`, `payment_code`, `payment_total`, `payment_status`, `payment_expired_at`, `payment_checkout_url`, `qris_image`
+- `payment_id`, `payment_code`, `payment_total`, `payment_status`, `payment_expired_at`, `payment_checkout_url`
