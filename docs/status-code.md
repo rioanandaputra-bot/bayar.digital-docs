@@ -36,8 +36,8 @@ sidebar_position: 11
 | `tenant_api_key_required` | 403 | API key bukan tenant gateway | Gunakan API key merchant tenant |
 | `bad_request` | 400 | JSON/body tidak valid | Perbaiki format request |
 | `validation_error` | 400 | Field tidak valid | Cek `errors` object di response |
-| `invalid_expired_at` | 400 | `expired_at` bukan epoch ms valid atau sudah lewat | Kirim epoch ms di masa depan |
-| `invalid_request` | 400 | Request tidak lolos validasi bisnis | Cek email/phone, order items, total, callback URL |
+| `invalid_expired_at` | 400 | `payment_expired_at` bukan format ISO 8601 valid atau sudah lewat | Kirim format ISO 8601 di masa depan |
+| `invalid_request` | 400 | Request tidak lolos validasi bisnis | Cek email/phone, customer_orders, total |
 | `not_found` | 404 | Payment/checkout tidak ditemukan | Cek ID atau `payment_code` |
 | `account_not_owned` | 403 | Account bukan milik merchant | Ambil account dari `GET /gateway/accounts` |
 | `no_active_quota` | 403 | Quota habis/tidak aktif | Top up quota di dashboard |

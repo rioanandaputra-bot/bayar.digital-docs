@@ -58,8 +58,8 @@ sequenceDiagram
 
 **Singkatnya:**
 
-1. Ambil daftar payment account → pilih `merchant_account_id`
-2. Buat payment → dapat `amount_total` + detail pembayaran
+1. Ambil daftar payment account → pilih `account_id`
+2. Buat payment → dapat `payment_total` + detail pembayaran
 3. Tampilkan instruksi bayar di UI kamu sendiri (**atau** redirect ke `checkout_url` jika mau)
 4. Customer bayar
 5. Android Worker otomatis deteksi pembayaran
@@ -70,7 +70,7 @@ sequenceDiagram
 | Komponen | Fungsi |
 | --- | --- |
 | Backend server | Simpan API key, panggil API gateway |
-| Tabel order/payment | Simpan `payment_code`, `amount_total`, `status` |
+| Tabel order/payment | Simpan `payment_code`, `payment_total`, `status` |
 | Webhook endpoint | Terima notifikasi perubahan status payment |
 | Reconciliation job | Cek status payment berkala sebagai fallback |
 
@@ -102,10 +102,11 @@ sequenceDiagram
 {
   "success": true,
   "data": [],
-  "meta": {
-    "page": 1,
-    "per_page": 20,
+  "pagination": {
     "total": 50,
+    "count": 20,
+    "per_page": 20,
+    "current_page": 1,
     "total_pages": 3
   }
 }

@@ -16,16 +16,15 @@ Content-Type: application/json
 
 ```json
 {
-  "merchant_account_id": "550e8400-e29b-41d4-a716-446655440000",
+  "account_id": "550e8400-e29b-41d4-a716-446655440000",
   "payment_code": "INV-2026-0001",
-  "amount_original": 50000,
-  "expired_at": 1791691200000,
+  "payment_amount": 50000,
+  "payment_expired_at": "2026-10-11T12:00:00Z",
   "customer_name": "Budi Santoso",
   "customer_email": "budi@example.com",
   "customer_phone": "081234567890",
-  "callback_url": "https://yourserver.com/webhooks/bayar",
-  "return_url": "https://yourserver.com/orders/INV-2026-0001",
-  "order_items": [
+  "payment_return_url": "https://yourserver.com/orders/INV-2026-0001",
+  "customer_orders": [
     {
       "name": "Produk A",
       "price": 50000,
@@ -40,27 +39,26 @@ Content-Type: application/json
 
 | Field | Tipe | Required | Keterangan |
 | --- | --- | --- | --- |
-| `merchant_account_id` | UUID | Ya | ID dari `GET /gateway/accounts` |
+| `account_id` | UUID | Ya | ID dari `GET /gateway/accounts` |
 | `payment_code` | string | Ya | Kode unik dari sistem kamu (maks 100 char) |
-| `amount_original` | integer | Ya | Nominal order, harus lebih dari 0 |
-| `expired_at` | integer | Ya | Epoch milliseconds, harus di masa depan |
+| `payment_amount` | integer | Ya | Nominal order, harus lebih dari 0 |
+| `payment_expired_at` | string | Ya | Format ISO 8601 (contoh: `"2026-10-11T12:00:00Z"`), harus di masa depan |
 | `customer_name` | string | Ya | Nama customer (maks 255 char) |
 | `customer_email` | string | Kondisional | Minimal salah satu email/phone wajib diisi |
 | `customer_phone` | string | Kondisional | Minimal salah satu email/phone wajib diisi |
-| `callback_url` | string | Tidak | URL webhook untuk notifikasi status |
-| `return_url` | string | Tidak | URL redirect setelah customer bayar |
-| `order_items` | array | Tidak | Detail item order |
+| `payment_return_url` | string | Tidak | URL redirect setelah customer bayar |
+| `customer_orders` | array | Tidak | Detail item order |
 
-Jika `callback_url` tidak dikirim, sistem memakai default callback URL merchant dari dashboard.
+*Note*: Webhook URL tidak lagi dikirim di dalam request body. Semua notifikasi webhook dikirim secara global ke URL yang terkonfigurasi di Dashboard Tenant Anda demi alasan keamanan.
 
-### Order Item
+### Customer Orders (Order Item)
 
 | Field | Tipe | Required |
 | --- | --- | --- |
 | `name` | string | Ya |
 | `price` | integer | Ya |
 | `quantity` | integer | Ya |
-| `subtotal` | integer | Ya, akan dihitung ulang sebagai `price * quantity` |
+| `subtotal` | integer | Ya, dihitung ulang sebagai `price * quantity` |
 | `sku` | string | Tidak |
 | `product_url` | string | Tidak |
 | `image_url` | string | Tidak |
@@ -72,46 +70,52 @@ Jika `callback_url` tidak dikirim, sistem memakai default callback URL merchant 
   "success": true,
   "message": "created",
   "data": {
-    "id": "660e8400-e29b-41d4-a716-446655440010",
-    "merchant_account_id": "550e8400-e29b-41d4-a716-446655440000",
+    "payment_id": "660e8400-e29b-41d4-a716-446655440010",
+    "account_id": "550e8400-e29b-41d4-a716-446655440000",
     "payment_code": "INV-2026-0001",
-    "amount_original": 50000,
-    "amount_unique": 123,
-    "amount_total": 50123,
-    "status": "PENDING",
-    "expires_at": "2026-10-11T12:00:00Z",
-    "created_at": "2026-06-11T10:00:00Z",
+    "payment_amount": 50000,
+    "payment_unique": 123,
+    "payment_total": 50123,
+    "payment_status": "PENDING",
+    "payment_expired_at": "2026-10-11T12:00:00Z",
+    "payment_updated_at": "2026-06-11T10:00:00Z",
+    "payment_webhook_url": "https://yourserver.com/webhooks/bayar",
+    "payment_checkout_url": "https://bayar.digital/checkout/660e8400-e29b-41d4-a716-446655440010",
+    "payment_return_url": "https://yourserver.com/orders/INV-2026-0001",
     "customer_name": "Budi Santoso",
     "customer_email": "budi@example.com",
     "customer_phone": "081234567890",
-    "callback_url": "https://yourserver.com/webhooks/bayar",
-    "return_url": "https://yourserver.com/orders/INV-2026-0001",
-    "checkout_url": "/checkout/660e8400-e29b-41d4-a716-446655440010",
-    "order_items": "[{\"name\":\"Produk A\",\"price\":50000,\"quantity\":1,\"subtotal\":50000}]",
+    "customer_orders": [
+      {
+        "name": "Produk A",
+        "price": 50000,
+        "quantity": 1,
+        "subtotal": 50000
+      }
+    ],
     "account_number": "1234567890",
     "account_name": "PT Tenant Contoh",
-    "bank_name": "BCA",
-    "bank_type": "TRANSFER"
+    "channel_id": "330e8400-e29b-41d4-a716-446655440000",
+    "channel_name": "Bank Central Asia",
+    "channel_type": "TRANSFER",
+    "qris_image": null,
+    "payment_instructions": []
   }
 }
 ```
 
 ## Nominal Unik
 
-Sistem menambahkan `amount_unique` ke `amount_original` secara otomatis.
+Sistem menambahkan `payment_unique` ke `payment_amount` secara otomatis.
 
 ```
-amount_total = amount_original + amount_unique
+payment_total = payment_amount + payment_unique
 ```
 
-**Customer harus bayar sesuai `amount_total`.** Tampilkan `amount_total` di UI kamu, bukan `amount_original`.
+**Customer harus bayar sesuai `payment_total`.** Tampilkan `payment_total` di UI kamu, bukan `payment_amount`.
 
 ## Simpan di Sistem Kamu
 
 Setelah create payment, simpan minimal:
 
-- `id`, `payment_code`, `amount_total`, `status`, `expires_at`, `checkout_url`
-
-:::info
-Di response payment, `order_items` dikembalikan sebagai string JSON.
-:::
+- `payment_id`, `payment_code`, `payment_total`, `payment_status`, `payment_expired_at`, `payment_checkout_url`, `qris_image`

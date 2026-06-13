@@ -4,19 +4,17 @@ sidebar_position: 8
 
 # Webhook
 
-Bayar Digital mengirim HTTP POST ke `callback_url` kamu saat status payment berubah.
+Bayar Digital mengirim HTTP POST ke **Webhook URL** Anda saat status payment berubah.
 
 ## Setup
 
-Kirim `callback_url` saat create payment:
+Webhook URL dan Webhook Secret dikonfigurasi secara terpusat (global) melalui Dashboard Tenant pada pengaturan Merchant Anda demi alasan keamanan. Sistem tidak menerima parameter webhook dinamis di request body saat pembuatan payment.
 
-```json
-{
-  "callback_url": "https://yourserver.com/webhooks/bayar"
-}
-```
+Setiap perubahan status pembayaran akan secara otomatis memicu pengiriman notifikasi webhook ke URL tersebut.
 
 ## Payload
+
+Sistem mengirimkan payload dengan struktur JSON berikut:
 
 ```json
 {
@@ -30,33 +28,33 @@ Kirim `callback_url` saat create payment:
 
 ## Signature Verification
 
-Jika `callback_secret` dikonfigurasi di dashboard, webhook menyertakan header:
+Jika **Webhook Secret** (HMAC Secret) dikonfigurasi di dashboard, setiap request webhook menyertakan header:
 
 ```
 X-Signature: <hex_hmac_sha256>
 ```
 
-Signature = HMAC-SHA256 dari raw JSON body menggunakan `callback_secret`.
+Signature dihitung sebagai HMAC-SHA256 dari *raw JSON body* menggunakan Webhook Secret Anda.
 
-## Handler Kamu Harus
+## Handler Anda Harus
 
-1. Verifikasi signature (jika pakai `callback_secret`)
-2. Validasi `payment_code` ada di sistem kamu
-3. Validasi `amount` sesuai `amount_total` order
-4. Update status order secara **idempotent**
-5. Balas `200 OK`
+1. Verifikasi signature (jika menggunakan Webhook Secret)
+2. Validasi `payment_code` terdaftar di sistem internal Anda
+3. Validasi `amount` sesuai dengan `payment_total` pada order Anda
+4. Perbarui status order secara **idempotent**
+5. Kembalikan response `200 OK`
 
 :::tip
-Jika proses update order berat, simpan payload dulu, balas `200`, proses async.
+Jika proses update order di sistem Anda membutuhkan waktu lama, simpan payload terlebih dahulu ke antrean, kembalikan respon `200 OK`, lalu proses secara asinkron.
 :::
 
 ## Idempotency
 
-Webhook bisa dikirim lebih dari sekali. Pastikan handler aman dipanggil berulang:
+Webhook bisa dikirim lebih dari sekali oleh sistem retry Bayar Digital. Pastikan handler Anda aman dipanggil berulang kali:
 
-- Order sudah `PAID` → abaikan webhook `PAID` berikutnya
-- Jangan ubah order `PAID` ke status lain
-- Log semua payload untuk audit
+- Jika order sudah `PAID` → abaikan notifikasi `PAID` berikutnya
+- Jangan ubah status order yang sudah `PAID` kembali ke status lain
+- Log semua payload webhook yang masuk untuk keperluan audit
 
 ## Contoh Handler
 
@@ -67,9 +65,9 @@ const crypto = require('crypto');
 
 app.post('/webhooks/bayar', express.json(), (req, res) => {
   // Verifikasi signature
-  if (process.env.CALLBACK_SECRET) {
+  if (process.env.WEBHOOK_SECRET) {
     const expected = crypto
-      .createHmac('sha256', process.env.CALLBACK_SECRET)
+      .createHmac('sha256', process.env.WEBHOOK_SECRET)
       .update(JSON.stringify(req.body))
       .digest('hex');
     if (req.headers['x-signature'] !== expected) {
@@ -89,7 +87,7 @@ app.post('/webhooks/bayar', express.json(), (req, res) => {
 
 ```php
 Route::post('webhooks/bayar', function (Request $request) {
-    $secret = config('services.bayar.callback_secret');
+    $secret = config('services.bayar.webhook_secret');
 
     if ($secret) {
         $expected = hash_hmac('sha256', $request->getContent(), $secret);
@@ -113,6 +111,7 @@ Route::post('webhooks/bayar', function (Request $request) {
 ### Python (FastAPI)
 
 ```python
+import os
 import hmac, hashlib
 from fastapi import FastAPI, Request, HTTPException
 
@@ -121,7 +120,7 @@ app = FastAPI()
 @app.post("/webhooks/bayar")
 async def webhook(request: Request):
     body = await request.body()
-    secret = os.environ.get("CALLBACK_SECRET")
+    secret = os.environ.get("WEBHOOK_SECRET")
 
     if secret:
         expected = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()

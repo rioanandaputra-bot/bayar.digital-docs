@@ -4,7 +4,7 @@ sidebar_position: 4
 
 # Android Worker
 
-Aplikasi Android yang berjalan di perangkat tenant untuk mendeteksi pembayaran masuk secara otomatis. Tanpa worker aktif, payment tidak akan terdeteksi.
+Aplikasi Android yang berjalan di perangkat khusus milik Anda (sebagai Tenant/Merchant) untuk mendeteksi pembayaran masuk ke rekening Anda secara otomatis. Tanpa worker aktif di perangkat Anda, pembayaran customer tidak akan dapat dideteksi secara otomatis.
 
 ## Yang Perlu Disiapkan
 
