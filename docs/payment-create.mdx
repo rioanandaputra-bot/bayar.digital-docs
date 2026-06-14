@@ -1,0 +1,264 @@
+---
+sidebar_position: 5
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Payment Create
+
+Membuat invoice pembayaran baru. Sistem otomatis menambahkan **nominal unik** (1-999) agar transfer customer bisa dideteksi.
+
+Setelah mendapat `account_id` dari [Payment Account](./payment-account), langkah ini membuat invoice yang akan dibayar customer.
+
+`payment_code` bersifat **idempotency key** — request dengan kode yang sama akan ditolak (409), mencegah duplikasi invoice.
+
+Sistem generate angka acak 1-999 sebagai nominal unik. Customer WAJIB membayar sebesar `payment_total` (`payment_amount + payment_unique`), bukan `payment_amount`.
+
+```
+Total: Rp 50.123
+(Rp 50.000 + kode unik Rp 123)
+```
+
+## Request
+
+<Tabs>
+  <TabItem value="endpoint" label="Endpoint">
+    <table>
+    <thead>
+    <tr><th>Method</th><th>URL</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`POST`</td><td>`https://api.bayar.digital/gateway/payments`</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="param" label="Param">
+    <table>
+    <thead>
+    <tr><th>Parameter</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td colspan="4">Tidak ada parameter.</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="header" label="Header">
+    <table>
+    <thead>
+    <tr><th>Header</th><th>Wajib</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`X-Api-Key`</td><td>Ya</td><td>API Key merchant</td></tr>
+    <tr><td>`Content-Type`</td><td>Ya</td><td>`application/json`</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="body" label="Body">
+    <table>
+    <thead>
+    <tr><th>Field</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`account_id`</td><td>uuid</td><td>Ya</td><td>ID akun tujuan (dari `GET /gateway/accounts`)</td></tr>
+    <tr><td>`payment_code`</td><td>string</td><td>Ya</td><td>Idempotency key. Kode unik dari sistem kamu</td></tr>
+    <tr><td>`payment_amount`</td><td>int64</td><td>Ya</td><td>Nominal invoice sebelum nominal unik</td></tr>
+    <tr><td>`payment_expired_at`</td><td>string</td><td>Ya</td><td>Batas waktu (ISO 8601, harus di masa depan)</td></tr>
+    <tr><td>`customer_name`</td><td>string</td><td>Ya</td><td>Nama customer</td></tr>
+    <tr><td>`customer_email`</td><td>string</td><td>Tidak</td><td>Email (maks 255). Minimal email atau phone</td></tr>
+    <tr><td>`customer_phone`</td><td>string</td><td>Tidak</td><td>Telepon (maks 50). Minimal email atau phone</td></tr>
+    <tr><td>`payment_webhook_url`</td><td>string</td><td>Tidak</td><td>Webhook endpoint khusus invoice ini</td></tr>
+    <tr><td>`payment_return_url`</td><td>string</td><td>Tidak</td><td>Redirect setelah customer bayar</td></tr>
+    <tr><td>`customer_orders`</td><td>array</td><td>Tidak</td><td>Daftar item pesanan</td></tr>
+    </tbody>
+    </table>
+
+    **Order Item:**
+
+    <table>
+    <thead>
+    <tr><th>Field</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`sku`</td><td>string</td><td>Tidak</td><td>SKU produk</td></tr>
+    <tr><td>`name`</td><td>string</td><td>Ya</td><td>Nama produk</td></tr>
+    <tr><td>`price`</td><td>int64</td><td>Ya</td><td>Harga satuan</td></tr>
+    <tr><td>`quantity`</td><td>int</td><td>Ya</td><td>Jumlah</td></tr>
+    <tr><td>`subtotal`</td><td>int64</td><td>Ya</td><td>Akan di-override sistem = `price × quantity`</td></tr>
+    <tr><td>`product_url`</td><td>string</td><td>Tidak</td><td>URL halaman produk</td></tr>
+    <tr><td>`image_url`</td><td>string</td><td>Tidak</td><td>URL gambar produk</td></tr>
+    </tbody>
+    </table>
+
+    Jika `customer_orders` diisi, total seluruh `subtotal` harus sama dengan `payment_amount`.
+  </TabItem>
+  <TabItem value="contoh" label="Contoh" default>
+    ```bash
+    curl -X POST https://api.bayar.digital/gateway/payments \
+      -H "X-Api-Key: pk_..." \
+      -H "Content-Type: application/json" \
+      -d '{
+        "account_id": "550e8400-e29b-41d4-a716-446655440000",
+        "payment_code": "INV-2026-0001",
+        "payment_amount": 50000,
+        "payment_expired_at": "2026-10-11T12:00:00Z",
+        "customer_name": "Budi Santoso",
+        "customer_email": "budi@example.com",
+        "customer_phone": "081234567890"
+      }'
+    ```
+  </TabItem>
+</Tabs>
+
+## Response
+
+<Tabs>
+  <TabItem value="sukses" label="Sukses" default>
+    <table>
+    <thead>
+    <tr><th>Field</th><th>Tipe</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`payment_id`</td><td>uuid</td><td>ID unik invoice</td></tr>
+    <tr><td>`payment_code`</td><td>string</td><td>Kode invoice dari sistem kamu</td></tr>
+    <tr><td>`payment_amount`</td><td>int64</td><td>Nominal asli (tanpa nominal unik)</td></tr>
+    <tr><td>`payment_unique`</td><td>int64</td><td>Nominal unik (1-999)</td></tr>
+    <tr><td>`payment_total`</td><td>int64</td><td>**Total yang harus dibayar** = amount + unique</td></tr>
+    <tr><td>`payment_status`</td><td>string</td><td>`PENDING`</td></tr>
+    <tr><td>`payment_expired_at`</td><td>datetime</td><td>Batas waktu pembayaran</td></tr>
+    <tr><td>`payment_updated_at`</td><td>datetime</td><td>Waktu update terakhir</td></tr>
+    <tr><td>`payment_webhook_url`</td><td>string/null</td><td>Webhook endpoint invoice ini</td></tr>
+    <tr><td>`payment_checkout_url`</td><td>string</td><td>URL halaman checkout publik</td></tr>
+    <tr><td>`payment_return_url`</td><td>string/null</td><td>Redirect URL</td></tr>
+    <tr><td>`customer_name`</td><td>string</td><td>Nama customer</td></tr>
+    <tr><td>`customer_email`</td><td>string/null</td><td>Email customer</td></tr>
+    <tr><td>`customer_phone`</td><td>string/null</td><td>Telepon customer</td></tr>
+    <tr><td>`customer_orders`</td><td>array</td><td>Item pesanan</td></tr>
+    <tr><td>`account_id`</td><td>uuid</td><td>ID akun tujuan</td></tr>
+    <tr><td>`account_number`</td><td>string</td><td>Nomor rekening tujuan</td></tr>
+    <tr><td>`account_name`</td><td>string</td><td>Nama pemilik rekening</td></tr>
+    <tr><td>`channel_id`</td><td>uuid</td><td>ID channel bank</td></tr>
+    <tr><td>`channel_name`</td><td>string</td><td>Nama bank</td></tr>
+    <tr><td>`channel_type`</td><td>string</td><td>`TRANSFER` / `QRIS`</td></tr>
+    <tr><td>`channel_instructions`</td><td>array</td><td>Instruksi pembayaran</td></tr>
+    <tr><td>`is_manual_match`</td><td>bool</td><td>Dicocokkan manual?</td></tr>
+    <tr><td>`manual_matched_mutation_id`</td><td>uuid/null</td><td>ID mutasi terkait</td></tr>
+    </tbody>
+    </table>
+
+    **201 Created**
+
+    ```json
+    {
+      "success": true,
+      "message": "created",
+      "data": {
+        "payment_id": "660e8400-e29b-41d4-a716-446655440010",
+        "payment_code": "INV-2026-0001",
+        "payment_amount": 50000,
+        "payment_unique": 123,
+        "payment_total": 50123,
+        "payment_status": "PENDING",
+        "payment_expired_at": "2026-10-11T12:00:00Z",
+        "payment_updated_at": "2026-06-11T10:00:00Z",
+        "payment_webhook_url": "https://yourserver.com/webhooks/bayar",
+        "payment_checkout_url": "https://bayar.digital/checkout/660e8400-e29b-41d4-a716-446655440010",
+        "payment_return_url": "https://yourserver.com/orders/INV-2026-0001",
+        "customer_name": "Budi Santoso",
+        "customer_email": "budi@example.com",
+        "customer_phone": "081234567890",
+        "customer_orders": [
+          {
+            "sku": "SKU001",
+            "name": "Produk A",
+            "price": 50000,
+            "quantity": 1,
+            "subtotal": 50000,
+            "product_url": "https://yourserver.com/products/produk-a",
+            "image_url": "https://yourserver.com/images/produk-a.jpg"
+          }
+        ],
+        "account_id": "550e8400-e29b-41d4-a716-446655440000",
+        "account_number": "1234567890",
+        "account_name": "PT Merchant Contoh",
+        "channel_id": "660e8400-e29b-41d4-a716-446655440001",
+        "channel_name": "Bank Central Asia",
+        "channel_type": "TRANSFER",
+        "channel_instructions": [],
+        "is_manual_match": false,
+        "manual_matched_mutation_id": null
+      }
+    }
+    ```
+  </TabItem>
+  <TabItem value="gagal" label="Gagal">
+    <table>
+    <thead>
+    <tr><th>Code</th><th>Status</th><th>Artinya</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`invalid request body`</td><td>400</td><td>Format JSON salah</td></tr>
+    <tr><td>`validation_error`</td><td>400</td><td>Field tidak valid (cek `errors`)</td></tr>
+    <tr><td>`invalid_expired_at`</td><td>400</td><td>Format `payment_expired_at` salah</td></tr>
+    <tr><td>`account_not_owned`</td><td>403</td><td>`account_id` bukan milik Anda</td></tr>
+    <tr><td>`no_active_quota`</td><td>403</td><td>Kuota akun habis</td></tr>
+    <tr><td>`tenant_api_key_required`</td><td>403</td><td>API Key tidak valid</td></tr>
+    <tr><td>`unique_amount_conflict`</td><td>409</td><td>Gagal generate nominal unik, coba lagi</td></tr>
+    <tr><td>`payment_code_conflict`</td><td>409</td><td>`payment_code` sudah dipakai (idempotency)</td></tr>
+    <tr><td>`internal_error`</td><td>500</td><td>Server error, coba lagi</td></tr>
+    </tbody>
+    </table>
+
+    **Validation Error (400)**
+
+    ```json
+    {
+      "success": false,
+      "code": "validation_error",
+      "message": "validation error",
+      "errors": {
+        "customer_name": "customer name is required"
+      }
+    }
+    ```
+
+    **Conflict (409)**
+    ```json
+    {
+      "success": false,
+      "code": "payment_code_conflict",
+      "message": "payment code conflict"
+    }
+    ```
+
+    **Conflict (409)**
+    ```json
+    {
+      "success": false,
+      "code": "unique_amount_conflict",
+      "message": "unique amount conflict"
+    }
+    ```
+  </TabItem>
+</Tabs>
+
+## Simpan di Sistem Kamu
+
+Setelah create payment, simpan field berikut:
+
+<table>
+<thead>
+<tr><th>Field</th><th>Gunakan Untuk</th></tr>
+</thead>
+<tbody>
+<tr><td>`payment_id`</td><td>Referensi unik invoice</td></tr>
+<tr><td>`payment_code`</td><td>Kode invoice kamu</td></tr>
+<tr><td>`payment_total`</td><td>Nominal yang harus dibayar customer</td></tr>
+<tr><td>`payment_status`</td><td>Status awal: `PENDING`</td></tr>
+<tr><td>`payment_checkout_url`</td><td>Redirect customer (opsional)</td></tr>
+<tr><td>`payment_webhook_url`</td><td>Webhook yang akan dikirimi notifikasi</td></tr>
+<tr><td>`account_number`</td><td>Nomor rekening tujuan</td></tr>
+<tr><td>`channel_instructions`</td><td>Instruksi pembayaran</td></tr>
+</tbody>
+</table>
+
+

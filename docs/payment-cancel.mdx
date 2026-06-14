@@ -1,0 +1,115 @@
+---
+sidebar_position: 9
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Payment Cancel
+
+Membatalkan invoice yang masih `PENDING`. Status berubah menjadi `CANCELLED`.
+
+Hanya invoice dengan status `PENDING` yang bisa dibatalkan. Invoice `PAID` / `EXPIRED` / `CANCELLED` tidak bisa dibatalkan.
+
+Jika customer masih perlu bayar, buat invoice baru dengan `payment_code` baru.
+
+## Request
+
+<Tabs>
+  <TabItem value="endpoint" label="Endpoint">
+    <table>
+    <thead>
+    <tr><th>Method</th><th>URL</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`DELETE`</td><td>`https://api.bayar.digital/gateway/payments/{payment_code}`</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="param" label="Param">
+    <table>
+    <thead>
+    <tr><th>Parameter</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`payment_code`</td><td>string</td><td>Ya</td><td>Kode invoice dari sistem kamu</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="header" label="Header">
+    <table>
+    <thead>
+    <tr><th>Header</th><th>Wajib</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`X-Api-Key`</td><td>Ya</td><td>API Key merchant</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="body" label="Body">
+    <table>
+    <thead>
+    <tr><th>Field</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td colspan="4">Tidak ada body.</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="contoh" label="Contoh" default>
+    ```bash
+    curl -X DELETE https://api.bayar.digital/gateway/payments/INV-2026-0001 \
+      -H "X-Api-Key: pk_..."
+    ```
+  </TabItem>
+</Tabs>
+
+## Response
+
+<Tabs>
+  <TabItem value="sukses" label="Sukses" default>
+    <table>
+    <thead>
+    <tr><th>Field</th><th>Tipe</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`success`</td><td>bool</td><td>`true`</td></tr>
+    <tr><td>`message`</td><td>string</td><td>`"ok"`</td></tr>
+    <tr><td>`data`</td><td>null</td><td>Selalu `null`</td></tr>
+    </tbody>
+    </table>
+
+    **200 OK**
+
+    ```json
+    {
+      "success": true,
+      "message": "ok",
+      "data": null
+    }
+    ```
+  </TabItem>
+  <TabItem value="gagal" label="Gagal">
+    <table>
+    <thead>
+    <tr><th>Code</th><th>Status</th><th>Artinya</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`tenant_api_key_required`</td><td>403</td><td>API Key tidak valid</td></tr>
+    <tr><td>`payment_not_cancellable`</td><td>404</td><td>Invoice tidak ditemukan atau bukan `PENDING`</td></tr>
+    <tr><td>`internal_error`</td><td>500</td><td>Server error, coba lagi</td></tr>
+    </tbody>
+    </table>
+
+    **404 Not Found**
+
+    ```json
+    {
+      "success": false,
+      "code": "payment_not_cancellable",
+      "message": "payment not found or not pending"
+    }
+    ```
+  </TabItem>
+</Tabs>
+
+

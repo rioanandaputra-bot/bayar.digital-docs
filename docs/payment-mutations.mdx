@@ -1,0 +1,167 @@
+---
+sidebar_position: 10
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Payment Mutations
+
+Mendapatkan daftar mutasi/transaksi masuk yang terdeteksi oleh Android Worker dari rekening Anda.
+
+Data mutasi berguna untuk rekonsiliasi dan mencocokkan payment secara manual jika otomatis gagal.
+
+**Cara kerja:** Worker mendeteksi notifikasi transfer → kirim ke server → sistem otomatis cocokkan dengan invoice `PENDING` berdasarkan nominal. Jika cocok, invoice jadi `PAID`. Jika tidak, mutasi tetap `unmatched` dan bisa dicocokkan manual via [Payment Match](./payment-match).
+
+Gunakan parameter `only_unmatched=true` untuk melihat mutasi yang belum otomatis cocok.
+
+## Request
+
+<Tabs>
+  <TabItem value="endpoint" label="Endpoint">
+    <table>
+    <thead>
+    <tr><th>Method</th><th>URL</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`GET`</td><td>`https://api.bayar.digital/gateway/mutations`</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="param" label="Param">
+    <table>
+    <thead>
+    <tr><th>Parameter</th><th>Tipe</th><th>Default</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`page`</td><td>integer</td><td>1</td><td>Halaman</td></tr>
+    <tr><td>`per_page`</td><td>integer</td><td>20</td><td>Data per halaman (max 100)</td></tr>
+    <tr><td>`only_unmatched`</td><td>bool</td><td>`false`</td><td>Tampilkan hanya yang **belum** cocok</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="header" label="Header">
+    <table>
+    <thead>
+    <tr><th>Header</th><th>Wajib</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`X-Api-Key`</td><td>Ya</td><td>API Key merchant</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="body" label="Body">
+    <table>
+    <thead>
+    <tr><th>Field</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td colspan="4">Tidak ada body.</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="contoh" label="Contoh" default>
+    ```bash
+    curl "https://api.bayar.digital/gateway/mutations?only_unmatched=true" \
+      -H "X-Api-Key: pk_..."
+    ```
+  </TabItem>
+</Tabs>
+
+## Response
+
+<Tabs>
+  <TabItem value="sukses" label="Sukses" default>
+    <table>
+    <thead>
+    <tr><th>Field</th><th>Tipe</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`id`</td><td>uuid</td><td>ID mutasi</td></tr>
+    <tr><td>`device_id`</td><td>uuid</td><td>ID Android Worker yang mendeteksi</td></tr>
+    <tr><td>`title`</td><td>string/null</td><td>Judul notifikasi transfer</td></tr>
+    <tr><td>`body`</td><td>string/null</td><td>Detail notifikasi</td></tr>
+    <tr><td>`posted_at`</td><td>datetime</td><td>Waktu transaksi</td></tr>
+    <tr><td>`amount_parsed`</td><td>int64</td><td>Nominal transfer</td></tr>
+    <tr><td>`sender_parsed`</td><td>string/null</td><td>Nama pengirim (terdeteksi otomatis)</td></tr>
+    <tr><td>`type_parsed`</td><td>string/null</td><td>`CREDIT` (masuk) / `DEBIT` (keluar)</td></tr>
+    <tr><td>`currency_parsed`</td><td>string/null</td><td>Mata uang (contoh: `IDR`)</td></tr>
+    <tr><td>`is_matched`</td><td>bool</td><td>Apakah sudah dipasangkan ke invoice</td></tr>
+    <tr><td>`matched_payment_id`</td><td>uuid/null</td><td>ID invoice yang cocok</td></tr>
+    <tr><td>`matched_payment_code`</td><td>string/null</td><td>Kode invoice yang cocok</td></tr>
+    <tr><td>`created_at`</td><td>datetime</td><td>Waktu terdeteksi oleh sistem</td></tr>
+    <tr><td>`device_name`</td><td>string/null</td><td>Nama perangkat Worker</td></tr>
+    <tr><td>`package_name`</td><td>string/null</td><td>Package name aplikasi bank</td></tr>
+    <tr><td>`app_name`</td><td>string/null</td><td>Nama aplikasi bank</td></tr>
+    <tr><td>`app_version`</td><td>string/null</td><td>Versi aplikasi bank</td></tr>
+    <tr><td>`account_number`</td><td>string/null</td><td>Rekening tujuan</td></tr>
+    <tr><td>`account_name`</td><td>string/null</td><td>Nama pemilik rekening</td></tr>
+    <tr><td>`bank_name`</td><td>string/null</td><td>Nama bank</td></tr>
+    <tr><td>`bank_type`</td><td>string/null</td><td>`TRANSFER` / `QRIS`</td></tr>
+    </tbody>
+    </table>
+
+    **200 OK**
+
+    ```json
+    {
+      "success": true,
+      "message": "ok",
+      "data": [
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440020",
+          "device_id": "660e8400-e29b-41d4-a716-446655440030",
+          "title": "Transfer dari BUDI SANTOSO",
+          "body": "BCA ke 1234567890 a/n PT Merchant Contoh",
+          "posted_at": "2026-06-11T10:30:00Z",
+          "amount_parsed": 50123,
+          "sender_parsed": "BUDI SANTOSO",
+          "type_parsed": "CREDIT",
+          "currency_parsed": "IDR",
+          "is_matched": false,
+          "matched_payment_id": null,
+          "matched_payment_code": null,
+          "created_at": "2026-06-11T10:30:05Z",
+          "device_name": "HP Kantor",
+          "package_name": "com.bca",
+          "app_name": "BCA Mobile",
+          "app_version": "6.2.0",
+          "account_number": "1234567890",
+          "account_name": "PT Merchant Contoh",
+          "bank_name": "Bank Central Asia",
+          "bank_type": "TRANSFER"
+        }
+      ],
+      "pagination": {
+        "total": 50,
+        "count": 1,
+        "per_page": 20,
+        "current_page": 1,
+        "total_pages": 3
+      }
+    }
+    ```
+  </TabItem>
+  <TabItem value="gagal" label="Gagal">
+    <table>
+    <thead>
+    <tr><th>Code</th><th>Status</th><th>Artinya</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`tenant_api_key_required`</td><td>403</td><td>API Key tidak valid</td></tr>
+    <tr><td>`internal_error`</td><td>500</td><td>Server error, coba lagi</td></tr>
+    </tbody>
+    </table>
+
+    **500 Internal Server Error**
+
+    ```json
+    {
+      "success": false,
+      "code": "internal_error",
+      "message": "internal server error"
+    }
+    ```
+  </TabItem>
+</Tabs>
+
+

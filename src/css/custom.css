@@ -67,3 +67,16 @@ a.doc-markdown-btn:hover {
   background: var(--ifm-color-primary);
   color: #fff;
 }
+
+table {
+  display: table;
+  width: 100%;
+}
+
+table tr:nth-child(2n) {
+  background: none;
+}
+
+table th {
+  background-color: var(--ifm-table-stripe-background);
+}

@@ -1,0 +1,134 @@
+---
+sidebar_position: 9
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Payment Match
+
+Mencocokkan invoice `PENDING` menjadi `PAID` secara manual.
+
+Gunakan jika customer sudah transfer tapi Worker tidak mendeteksi otomatis.
+
+Fitur ini memerlukan **2FA (TOTP)** yang diaktifkan di Dashboard → **Akun Saya** → **2FA**. Scan QR code dengan Google Authenticator, lalu gunakan kode 6 digit yang muncul.
+
+## Request
+
+<Tabs>
+  <TabItem value="endpoint" label="Endpoint">
+    <table>
+    <thead>
+    <tr><th>Method</th><th>URL</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`POST`</td><td>`https://api.bayar.digital/gateway/payments/{payment_code}/match`</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="param" label="Param">
+    <table>
+    <thead>
+    <tr><th>Parameter</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`payment_code`</td><td>string</td><td>Ya</td><td>Kode invoice yang akan dicocokkan</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="header" label="Header">
+    <table>
+    <thead>
+    <tr><th>Header</th><th>Wajib</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`X-Api-Key`</td><td>Ya</td><td>API Key merchant</td></tr>
+    <tr><td>`X-Totp-Code`</td><td>Ya</td><td>Kode 6 digit dari Google Authenticator</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="body" label="Body">
+    <table>
+    <thead>
+    <tr><th>Field</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`mutation_id`</td><td>uuid</td><td>Tidak</td><td>ID mutasi yang ingin dikaitkan (jika ada)</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="contoh" label="Contoh" default>
+    ```bash
+    curl -X POST https://api.bayar.digital/gateway/payments/INV-2026-0001/match \
+      -H "X-Api-Key: pk_..." \
+      -H "X-Totp-Code: 123456" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "mutation_id": "550e8400-e29b-41d4-a716-446655440020"
+      }'
+    ```
+  </TabItem>
+</Tabs>
+
+## Response
+
+<Tabs>
+  <TabItem value="sukses" label="Sukses" default>
+    <table>
+    <thead>
+    <tr><th>Field</th><th>Tipe</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`success`</td><td>bool</td><td>`true`</td></tr>
+    <tr><td>`message`</td><td>string</td><td>`"ok"`</td></tr>
+    <tr><td>`data`</td><td>null</td><td>Selalu `null`</td></tr>
+    </tbody>
+    </table>
+
+    **200 OK**
+
+    ```json
+    {
+      "success": true,
+      "message": "ok",
+      "data": null
+    }
+    ```
+  </TabItem>
+  <TabItem value="gagal" label="Gagal">
+    <table>
+    <thead>
+    <tr><th>Code</th><th>Status</th><th>Artinya</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`X-Totp-Code header is required`</td><td>400</td><td>Header TOTP tidak disertakan</td></tr>
+    <tr><td>`invalid totp code`</td><td>400</td><td>Kode TOTP salah</td></tr>
+    <tr><td>`tenant_api_key_required`</td><td>403</td><td>API Key tidak valid</td></tr>
+    <tr><td>`totp_not_enabled`</td><td>403</td><td>2FA belum diaktifkan di akun Anda</td></tr>
+    <tr><td>`not_found`</td><td>404</td><td>Invoice tidak ditemukan atau bukan `PENDING`</td></tr>
+    <tr><td>`internal_error`</td><td>500</td><td>Server error, coba lagi</td></tr>
+    </tbody>
+    </table>
+
+    **400 Bad Request**
+
+    ```json
+    {
+      "success": false,
+      "code": "invalid totp code",
+      "message": "invalid totp code"
+    }
+    ```
+
+    **403 Forbidden**
+
+    ```json
+    {
+      "success": false,
+      "code": "totp_not_enabled",
+      "message": "totp not enabled"
+    }
+    ```
+  </TabItem>
+</Tabs>
+
+

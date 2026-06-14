@@ -4,110 +4,87 @@ sidebar_position: 1
 
 # Overview
 
-Dokumentasi integrasi payment gateway Bayar Digital untuk developer tenant.
+Dokumentasi integrasi **Payment Gateway Bayar Digital** untuk developer Tenant.
 
-## Base URL
+Dengan API ini, sistem kamu bisa:
+- Membuat invoice pembayaran untuk customer
+- Mendapatkan notifikasi real-time via webhook saat customer bayar
+- Mengecek status pembayaran
+- Membatalkan invoice
 
-```
-https://api.bayar.digital
-```
-
-Semua endpoint gateway menggunakan prefix `/gateway/`.
-
-## Persiapan
-
-1. Daftar dan login ke [dashboard](https://bayar.digital)
-2. Buat merchant → salin **API Key** (`pk_...`)
-3. Setup Android Worker di perangkat khusus ([detail](./android-worker))
-
-## Authentication
-
-Kirim API key via header `X-Api-Key` di setiap request. Simpan di environment variable backend, jangan expose di frontend atau repository.
-
-```bash
-BAYAR_DIGITAL_API_KEY=pk_...
-BAYAR_DIGITAL_BASE_URL=https://api.bayar.digital
-```
-
-| Kondisi | HTTP | Code |
-| --- | --- | --- |
-| Header kosong | `401` | `unauthorized` |
-| API key tidak valid | `401` | `unauthorized` |
-| API key bukan milik tenant | `403` | `tenant_api_key_required` |
-
-**Rate limit:** 100 request/menit per merchant untuk semua endpoint `/gateway/*`. Jika limit terlampaui → `429` dengan code `rate_limited`. Tunggu sesuai header `X-RateLimit-Reset`.
+---
 
 ## Cara Kerja
 
 ```mermaid
 sequenceDiagram
-    participant T as Server Kamu
-    participant API as Bayar Digital
+    participant S as Server Kamu
+    participant API as Bayar Digital API
     participant W as Android Worker
     participant C as Customer
 
-    T->>API: 1. GET /gateway/accounts
-    API-->>T: Daftar payment account
-    T->>API: 2. POST /gateway/payments
-    API-->>T: Payment detail + checkout_url
-    T->>C: 3. Tampilkan instruksi bayar / redirect opsional
-    C->>C: 4. Bayar (transfer / QRIS)
-    W->>API: 5. Deteksi pembayaran
-    API->>T: 6. Webhook → status PAID
+    S->>API: 1. GET /gateway/accounts
+    API-->>S: Daftar payment account
+    S->>API: 2. POST /gateway/payments
+    API-->>S: Payment detail + checkout_url
+    S->>C: 3. Tampilkan instruksi bayar
+    C->>C: 4. Transfer / QRIS sesuai nominal
+    W->>API: 5. Deteksi pembayaran masuk
+    API->>S: 6. Webhook POST → status PAID
 ```
 
 **Singkatnya:**
 
-1. Ambil daftar payment account → pilih `account_id`
-2. Buat payment → dapat `payment_total` + detail pembayaran
-3. Tampilkan instruksi bayar di UI kamu sendiri (**atau** redirect ke `checkout_url` jika mau)
-4. Customer bayar
-5. Android Worker otomatis deteksi pembayaran
-6. Kamu terima webhook → update order
+1. **Ambil akun** → `GET /gateway/accounts` untuk lihat rekening tujuan
+2. **Buat invoice** → `POST /gateway/payments`, sistem generate nominal unik
+3. **Customer bayar** → Tampilkan instruksi via `checkout_url` atau UI kamu
+4. **Deteksi otomatis** → Android Worker di perangkatmu mendeteksi transfer masuk
+5. **Notifikasi** → Kamu terima webhook `PAID`, update status order
+
+---
 
 ## Yang Perlu Kamu Siapkan
 
 | Komponen | Fungsi |
-| --- | --- |
-| Backend server | Simpan API key, panggil API gateway |
-| Tabel order/payment | Simpan `payment_code`, `payment_total`, `status` |
-| Webhook endpoint | Terima notifikasi perubahan status payment |
-| Reconciliation job | Cek status payment berkala sebagai fallback |
+|----------|--------|
+| Backend server | Simpan API Key, panggil Gateway API |
+| Database order | Simpan `payment_code`, `payment_total`, `status` |
+| Webhook endpoint | Terima notifikasi perubahan status |
+| Android device khusus | Install Worker untuk deteksi otomatis |
+| Cron job (opsional) | Rekonsiliasi berkala sebagai fallback |
 
-## Response Format
+---
 
-**Sukses:**
+## Alur Dokumen
 
-```json
-{
-  "success": true,
-  "message": "ok",
-  "data": {}
-}
-```
+Baca dokumentasi sesuai urutan berikut:
 
-**Error:**
+| # | Topik | Deskripsi |
+|---|-------|-----------|
+| 1 | [Persiapan](./persiapan) | Setup API Key, base URL, rate limit |
+| 2 | [Android Worker](./android-worker) | Install aplikasi deteksi pembayaran |
+| 3 | [Payment Account](./payment-account) | Lihat daftar rekening tujuan |
+| 4 | [Payment Create](./payment-create) | Buat invoice pembayaran |
+| 5 | [Checkout](./checkout) | Halaman bayar untuk customer |
+| 6 | [Payment Detail](./payment-detail) | Detail satu invoice |
+| 7 | [Payment List](./payment-list) | Daftar invoice |
+| 8 | [Payment Cancel](./payment-cancel) | Batalkan invoice |
+| 9 | [Payment Match](./payment-match) | Cocokkan pembayaran manual |
+| 10 | [Payment Mutations](./payment-mutations) | Lihat mutasi terdeteksi |
+| 11 | [Webhook](./webhook) | Setup notifikasi real-time |
+| 12 | [Status & Error Code](./status-code) | Referensi kode error |
 
-```json
-{
-  "success": false,
-  "code": "ERROR_CODE",
-  "message": "Pesan error"
-}
-```
+---
 
-**Paginated:**
+## Daftar Endpoint
 
-```json
-{
-  "success": true,
-  "data": [],
-  "pagination": {
-    "total": 50,
-    "count": 20,
-    "per_page": 20,
-    "current_page": 1,
-    "total_pages": 3
-  }
-}
-```
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| `GET` | `/gateway/accounts` | Daftar rekening aktif |
+| `POST` | `/gateway/payments` | Buat invoice baru |
+| `GET` | `/gateway/payments` | Daftar invoice |
+| `GET` | `/gateway/payments/:code` | Detail invoice |
+| `DELETE` | `/gateway/payments/:code` | Batalkan invoice |
+| `POST` | `/gateway/payments/:code/match` | Cocokkan manual (butuh 2FA) |
+| `GET` | `/gateway/channels/:id/instructions` | Instruksi pembayaran |
+| `GET` | `/gateway/mutations` | Mutasi bank terdeteksi |

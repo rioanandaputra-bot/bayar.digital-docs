@@ -1,0 +1,150 @@
+---
+sidebar_position: 8
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Payment List
+
+Mendapatkan daftar invoice, diurutkan dari terbaru.
+
+Untuk detail satu invoice, lihat halaman [Payment Detail](./payment-detail).
+
+Gunakan endpoint ini untuk rekonsiliasi atau menampilkan history transaksi.
+
+Lihat [Status & Error Code](./status-code) untuk daftar lengkap status payment.
+
+## Request
+
+<Tabs>
+  <TabItem value="endpoint" label="Endpoint">
+    <table>
+    <thead>
+    <tr><th>Method</th><th>URL</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`GET`</td><td>`https://api.bayar.digital/gateway/payments`</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="param" label="Param">
+    <table>
+    <thead>
+    <tr><th>Parameter</th><th>Tipe</th><th>Default</th><th>Maks</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`page`</td><td>integer</td><td>1</td><td>—</td><td>Halaman</td></tr>
+    <tr><td>`per_page`</td><td>integer</td><td>20</td><td>100</td><td>Data per halaman</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="header" label="Header">
+    <table>
+    <thead>
+    <tr><th>Header</th><th>Wajib</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`X-Api-Key`</td><td>Ya</td><td>API Key merchant</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="body" label="Body">
+    <table>
+    <thead>
+    <tr><th>Field</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td colspan="4">Tidak ada body.</td></tr>
+    </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="contoh" label="Contoh" default>
+    ```bash
+    curl "https://api.bayar.digital/gateway/payments?page=1&per_page=20" \
+      -H "X-Api-Key: pk_..."
+    ```
+  </TabItem>
+</Tabs>
+
+## Response
+
+<Tabs>
+  <TabItem value="sukses" label="Sukses" default>
+    <table>
+    <thead>
+    <tr><th>Field Pagination</th><th>Tipe</th><th>Deskripsi</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`total`</td><td>int</td><td>Total data</td></tr>
+    <tr><td>`count`</td><td>int</td><td>Data di halaman ini</td></tr>
+    <tr><td>`per_page`</td><td>int</td><td>Data per halaman</td></tr>
+    <tr><td>`current_page`</td><td>int</td><td>Halaman saat ini</td></tr>
+    <tr><td>`total_pages`</td><td>int</td><td>Total halaman</td></tr>
+    </tbody>
+    </table>
+
+    **200 OK**
+
+    ```json
+    {
+      "success": true,
+      "data": [
+        {
+          "payment_id": "660e8400-e29b-41d4-a716-446655440010",
+          "payment_code": "INV-2026-0001",
+          "payment_amount": 50000,
+          "payment_unique": 123,
+          "payment_total": 50123,
+          "payment_status": "PAID",
+          "payment_expired_at": "2026-10-11T12:00:00Z",
+          "payment_updated_at": "2026-06-11T10:05:00Z",
+          "payment_webhook_url": "https://yourserver.com/webhooks/bayar",
+          "payment_checkout_url": "https://bayar.digital/checkout/660e8400-e29b-41d4-a716-446655440010",
+          "payment_return_url": "https://yourserver.com/orders/INV-2026-0001",
+          "customer_name": "Budi Santoso",
+          "customer_email": "budi@example.com",
+          "customer_phone": "081234567890",
+          "customer_orders": [],
+          "account_id": "550e8400-e29b-41d4-a716-446655440000",
+          "account_number": "1234567890",
+          "account_name": "PT Merchant Contoh",
+          "channel_id": "660e8400-e29b-41d4-a716-446655440001",
+          "channel_name": "Bank Central Asia",
+          "channel_type": "TRANSFER",
+          "channel_instructions": [],
+          "is_manual_match": false,
+          "manual_matched_mutation_id": null
+        }
+      ],
+      "pagination": {
+        "total": 50,
+        "count": 1,
+        "per_page": 20,
+        "current_page": 1,
+        "total_pages": 3
+      }
+    }
+    ```
+  </TabItem>
+  <TabItem value="gagal" label="Gagal">
+    <table>
+    <thead>
+    <tr><th>Code</th><th>Status</th><th>Artinya</th></tr>
+    </thead>
+    <tbody>
+    <tr><td>`tenant_api_key_required`</td><td>403</td><td>API Key tidak valid</td></tr>
+    <tr><td>`internal_error`</td><td>500</td><td>Server error, coba lagi</td></tr>
+    </tbody>
+    </table>
+
+    **500 Internal Server Error**
+
+    ```json
+    {
+      "success": false,
+      "code": "internal_error",
+      "message": "internal server error"
+    }
+    ```
+  </TabItem>
+</Tabs>
