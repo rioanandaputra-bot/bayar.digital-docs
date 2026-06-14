@@ -22,7 +22,6 @@ const sidebars: SidebarsConfig = {
         {type: 'doc', id: 'checkout', label: 'Checkout'},
         {type: 'doc', id: 'payment-detail', label: 'Payment Detail'},
         {type: 'doc', id: 'payment-list', label: 'Payment List'},
-        {type: 'doc', id: 'payment-cancel', label: 'Payment Cancel'},
       ],
     },
     {
@@ -32,6 +31,7 @@ const sidebars: SidebarsConfig = {
       items: [
         {type: 'doc', id: 'payment-match', label: 'Payment Match'},
         {type: 'doc', id: 'payment-mutations', label: 'Payment Mutations'},
+        {type: 'doc', id: 'payment-cancel', label: 'Payment Cancel'},
         {type: 'doc', id: 'channel-instructions', label: 'Channel Instructions'},
       ],
     },
