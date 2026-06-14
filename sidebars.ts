@@ -29,9 +29,9 @@ const sidebars: SidebarsConfig = {
       label: 'Operasional',
       collapsible: false,
       items: [
+        {type: 'doc', id: 'payment-cancel', label: 'Payment Cancel'},
         {type: 'doc', id: 'payment-match', label: 'Payment Match'},
         {type: 'doc', id: 'payment-mutations', label: 'Payment Mutations'},
-        {type: 'doc', id: 'payment-cancel', label: 'Payment Cancel'},
         {type: 'doc', id: 'channel-instructions', label: 'Channel Instructions'},
       ],
     },
