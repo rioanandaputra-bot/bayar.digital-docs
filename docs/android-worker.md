@@ -39,9 +39,7 @@ Worker harus berjalan 24 jam. Gunakan perangkat yang selalu terhubung listrik da
 
 ### 1. Download APK
 
-Download APK Worker dari Dashboard Bayar Digital atau link berikut:
-
-[Download Worker APK](https://bayar.digital/downloads/app-worker-latest.apk)
+Download APK Worker dari Dashboard Bayar Digital → menu **Pairing Device** → **Unduh Worker APK**.
 
 ### 2. Install APK
 

@@ -6,62 +6,62 @@ import TabItem from '@theme/TabItem';
 
 # Payment Mutations
 
-Mendapatkan daftar mutasi/transaksi masuk yang terdeteksi oleh Android Worker dari rekening Anda.
+Mengambil daftar mutasi atau transaksi masuk dari rekening Anda yang berhasil terdeteksi oleh Android Worker.
 
-Data mutasi berguna untuk rekonsiliasi dan mencocokkan payment secara manual jika otomatis gagal.
+Data mutasi ini sangat berguna untuk keperluan rekonsiliasi serta pencocokan transaksi secara manual apabila proses otomatisasi mengalami kendala.
 
-**Cara kerja:** Worker mendeteksi notifikasi transfer → kirim ke server → sistem otomatis cocokkan dengan invoice `PENDING` berdasarkan nominal. Jika cocok, invoice jadi `PAID`. Jika tidak, mutasi tetap `unmatched` dan bisa dicocokkan manual via [Payment Match](./payment-match).
+**Cara kerja:** Android Worker mendeteksi notifikasi transfer masuk → mengirimkan data ke server → sistem secara otomatis mencocokkan transaksi tersebut dengan *invoice* berstatus `PENDING` berdasarkan nominal unik. Jika nominal cocok, status *invoice* akan berubah menjadi `PAID`. Jika tidak ada nominal yang sesuai, mutasi tersebut akan berstatus `unmatched` dan dapat dicocokkan secara manual melalui *endpoint* [Payment Match](./payment-match).
 
-Gunakan parameter `only_unmatched=true` untuk melihat mutasi yang belum otomatis cocok.
+Gunakan parameter `only_unmatched=true` untuk memfilter dan hanya menampilkan mutasi yang belum terpasangkan secara otomatis.
 
 ## Request
 
 <Tabs>
   <TabItem value="endpoint" label="Endpoint">
     <table>
-    <thead>
-    <tr><th>Method</th><th>URL</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`GET`</td><td>`https://api.bayar.digital/gateway/mutations`</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Method</th><th>URL</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`GET`</td><td>`https://api.bayar.digital/gateway/mutations`</td></tr>
+      </tbody>
     </table>
   </TabItem>
-  <TabItem value="param" label="Param">
+  <TabItem value="param" label="Parameter">
     <table>
-    <thead>
-    <tr><th>Parameter</th><th>Tipe</th><th>Default</th><th>Deskripsi</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`page`</td><td>integer</td><td>1</td><td>Halaman</td></tr>
-    <tr><td>`per_page`</td><td>integer</td><td>20</td><td>Data per halaman (max 100)</td></tr>
-    <tr><td>`only_unmatched`</td><td>bool</td><td>`false`</td><td>Tampilkan hanya yang **belum** cocok</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Parameter</th><th>Tipe</th><th>Default</th><th>Deskripsi</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`page`</td><td>integer</td><td>1</td><td>Halaman data yang ingin ditampilkan</td></tr>
+        <tr><td>`per_page`</td><td>integer</td><td>20</td><td>Jumlah data yang ditarik per halaman (maksimal 100)</td></tr>
+        <tr><td>`only_unmatched`</td><td>bool</td><td>`false`</td><td>Filter untuk hanya menampilkan mutasi yang **belum** cocok (*unmatched*)</td></tr>
+      </tbody>
     </table>
   </TabItem>
   <TabItem value="header" label="Header">
     <table>
-    <thead>
-    <tr><th>Header</th><th>Wajib</th><th>Deskripsi</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`X-Api-Key`</td><td>Ya</td><td>API Key merchant</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Header</th><th>Wajib</th><th>Deskripsi</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`X-Api-Key`</td><td>Ya</td><td>API Key *merchant* Anda</td></tr>
+      </tbody>
     </table>
   </TabItem>
   <TabItem value="body" label="Body">
     <table>
-    <thead>
-    <tr><th>Field</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
-    </thead>
-    <tbody>
-    <tr><td colspan="4">Tidak ada body.</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Field</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="4">Tidak ada *body* pada *request* ini.</td></tr>
+      </tbody>
     </table>
   </TabItem>
   <TabItem value="contoh" label="Contoh" default>
     ```bash
-    curl "https://api.bayar.digital/gateway/mutations?only_unmatched=true" \
+    curl "[https://api.bayar.digital/gateway/mutations?only_unmatched=true](https://api.bayar.digital/gateway/mutations?only_unmatched=true)" \
       -H "X-Api-Key: pk_..."
     ```
   </TabItem>
@@ -72,32 +72,32 @@ Gunakan parameter `only_unmatched=true` untuk melihat mutasi yang belum otomatis
 <Tabs>
   <TabItem value="sukses" label="Sukses" default>
     <table>
-    <thead>
-    <tr><th>Field</th><th>Tipe</th><th>Deskripsi</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`id`</td><td>uuid</td><td>ID mutasi</td></tr>
-    <tr><td>`device_id`</td><td>uuid</td><td>ID Android Worker yang mendeteksi</td></tr>
-    <tr><td>`title`</td><td>string/null</td><td>Judul notifikasi transfer</td></tr>
-    <tr><td>`body`</td><td>string/null</td><td>Detail notifikasi</td></tr>
-    <tr><td>`posted_at`</td><td>datetime</td><td>Waktu transaksi</td></tr>
-    <tr><td>`amount_parsed`</td><td>int64</td><td>Nominal transfer</td></tr>
-    <tr><td>`sender_parsed`</td><td>string/null</td><td>Nama pengirim (terdeteksi otomatis)</td></tr>
-    <tr><td>`type_parsed`</td><td>string/null</td><td>`CREDIT` (masuk) / `DEBIT` (keluar)</td></tr>
-    <tr><td>`currency_parsed`</td><td>string/null</td><td>Mata uang (contoh: `IDR`)</td></tr>
-    <tr><td>`is_matched`</td><td>bool</td><td>Apakah sudah dipasangkan ke invoice</td></tr>
-    <tr><td>`matched_payment_id`</td><td>uuid/null</td><td>ID invoice yang cocok</td></tr>
-    <tr><td>`matched_payment_code`</td><td>string/null</td><td>Kode invoice yang cocok</td></tr>
-    <tr><td>`created_at`</td><td>datetime</td><td>Waktu terdeteksi oleh sistem</td></tr>
-    <tr><td>`device_name`</td><td>string/null</td><td>Nama perangkat Worker</td></tr>
-    <tr><td>`package_name`</td><td>string/null</td><td>Package name aplikasi bank</td></tr>
-    <tr><td>`app_name`</td><td>string/null</td><td>Nama aplikasi bank</td></tr>
-    <tr><td>`app_version`</td><td>string/null</td><td>Versi aplikasi bank</td></tr>
-    <tr><td>`account_number`</td><td>string/null</td><td>Rekening tujuan</td></tr>
-    <tr><td>`account_name`</td><td>string/null</td><td>Nama pemilik rekening</td></tr>
-    <tr><td>`bank_name`</td><td>string/null</td><td>Nama bank</td></tr>
-    <tr><td>`bank_type`</td><td>string/null</td><td>`TRANSFER` / `QRIS`</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Field</th><th>Tipe</th><th>Deskripsi</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`id`</td><td>uuid</td><td>ID unik mutasi</td></tr>
+        <tr><td>`device_id`</td><td>uuid</td><td>ID perangkat Android Worker yang mendeteksi transaksi</td></tr>
+        <tr><td>`title`</td><td>string/null</td><td>Judul notifikasi transfer dari aplikasi bank</td></tr>
+        <tr><td>`body`</td><td>string/null</td><td>Isi detail notifikasi transfer</td></tr>
+        <tr><td>`posted_at`</td><td>datetime</td><td>Waktu transaksi dicatat oleh bank</td></tr>
+        <tr><td>`amount_parsed`</td><td>int64</td><td>Nominal transfer yang berhasil diekstrak</td></tr>
+        <tr><td>`sender_parsed`</td><td>string/null</td><td>Nama pengirim yang berhasil diekstrak</td></tr>
+        <tr><td>`type_parsed`</td><td>string/null</td><td>Jenis mutasi: `CREDIT` (dana masuk) / `DEBIT` (dana keluar)</td></tr>
+        <tr><td>`currency_parsed`</td><td>string/null</td><td>Mata uang (contoh: `IDR`)</td></tr>
+        <tr><td>`is_matched`</td><td>bool</td><td>Indikator apakah mutasi ini sudah dipasangkan dengan *invoice*</td></tr>
+        <tr><td>`matched_payment_id`</td><td>uuid/null</td><td>ID *invoice* yang berpasangan dengan mutasi ini</td></tr>
+        <tr><td>`matched_payment_code`</td><td>string/null</td><td>Kode *invoice* yang berpasangan dengan mutasi ini</td></tr>
+        <tr><td>`created_at`</td><td>datetime</td><td>Waktu mutasi terdeteksi dan dicatat oleh sistem server</td></tr>
+        <tr><td>`device_name`</td><td>string/null</td><td>Nama perangkat Android Worker</td></tr>
+        <tr><td>`package_name`</td><td>string/null</td><td>*Package name* dari aplikasi bank yang mengirim notifikasi</td></tr>
+        <tr><td>`app_name`</td><td>string/null</td><td>Nama aplikasi bank pengirim notifikasi</td></tr>
+        <tr><td>`app_version`</td><td>string/null</td><td>Versi aplikasi bank pengirim notifikasi</td></tr>
+        <tr><td>`account_number`</td><td>string/null</td><td>Nomor rekening tujuan penerima dana</td></tr>
+        <tr><td>`account_name`</td><td>string/null</td><td>Nama pemilik rekening tujuan</td></tr>
+        <tr><td>`bank_name`</td><td>string/null</td><td>Nama bank penerima dana</td></tr>
+        <tr><td>`bank_type`</td><td>string/null</td><td>Jenis metode: `TRANSFER` atau `QRIS`</td></tr>
+      </tbody>
     </table>
 
     **200 OK**
@@ -143,13 +143,13 @@ Gunakan parameter `only_unmatched=true` untuk melihat mutasi yang belum otomatis
   </TabItem>
   <TabItem value="gagal" label="Gagal">
     <table>
-    <thead>
-    <tr><th>Code</th><th>Status</th><th>Artinya</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`tenant_api_key_required`</td><td>403</td><td>API Key tidak valid</td></tr>
-    <tr><td>`internal_error`</td><td>500</td><td>Server error, coba lagi</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Code</th><th>Status</th><th>Keterangan</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`tenant_api_key_required`</td><td>403</td><td>API Key tidak valid atau tidak disertakan</td></tr>
+        <tr><td>`internal_error`</td><td>500</td><td>Terjadi kendala pada server, silakan coba beberapa saat lagi</td></tr>
+      </tbody>
     </table>
 
     **500 Internal Server Error**
@@ -163,5 +163,3 @@ Gunakan parameter `only_unmatched=true` untuk melihat mutasi yang belum otomatis
     ```
   </TabItem>
 </Tabs>
-
-

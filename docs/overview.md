@@ -2,26 +2,18 @@
 sidebar_position: 1
 ---
 
-# Overview
+# Panduan Integrasi Bayar Digital
 
-Dokumentasi integrasi **Payment Gateway Bayar Digital** untuk developer Tenant.
+Dokumentasi integrasi Payment Gateway Bayar Digital untuk developer. Sistem Anda dapat membuat invoice, mengecek status, dan menerima notifikasi real-time secara otomatis.
 
-Dengan API ini, sistem kamu bisa:
-- Membuat invoice pembayaran untuk customer
-- Mendapatkan notifikasi real-time via webhook saat customer bayar
-- Mengecek status pembayaran
-- Membatalkan invoice
-
----
-
-## Cara Kerja
+## Alur Kerja Utama
 
 ```mermaid
 sequenceDiagram
-    participant S as Server Kamu
+    participant S as Server Anda
     participant API as Bayar Digital API
     participant W as Android Worker
-    participant C as Customer
+    participant C as Pelanggan
 
     S->>API: 1. GET /gateway/accounts
     API-->>S: Daftar payment account
@@ -33,58 +25,46 @@ sequenceDiagram
     API->>S: 6. Webhook POST → status PAID
 ```
 
-**Singkatnya:**
-
-1. **Ambil akun** → `GET /gateway/accounts` untuk lihat rekening tujuan
-2. **Buat invoice** → `POST /gateway/payments`, sistem generate nominal unik
-3. **Customer bayar** → Tampilkan instruksi via `checkout_url` atau UI kamu
-4. **Deteksi otomatis** → Android Worker di perangkatmu mendeteksi transfer masuk
-5. **Notifikasi** → Kamu terima webhook `PAID`, update status order
+1. **Ambil Akun:** Panggil `GET /gateway/accounts` untuk melihat daftar rekening tujuan.
+2. **Buat Invoice:** Panggil `POST /gateway/payments` untuk mendapatkan nominal transfer unik dan URL *checkout*.
+3. **Pembayaran:** Pelanggan melakukan transfer sesuai instruksi.
+4. **Deteksi Otomatis:** Aplikasi Android Worker mendeteksi mutasi transfer masuk.
+5. **Notifikasi:** Server menerima *webhook* berstatus `PAID` untuk memproses pesanan.
 
 ---
 
-## Yang Perlu Kamu Siapkan
+## Persiapan Sistem
 
-| Komponen | Fungsi |
-|----------|--------|
-| Backend server | Simpan API Key, panggil Gateway API |
-| Database order | Simpan `payment_code`, `payment_total`, `status` |
-| Webhook endpoint | Terima notifikasi perubahan status |
-| Android device khusus | Install Worker untuk deteksi otomatis |
-| Cron job (opsional) | Rekonsiliasi berkala sebagai fallback |
+**1. Konfigurasi API**
+* **Base URL:** `https://api.bayar.digital` (gunakan *prefix* `/gateway/`).
+* **Autentikasi:** Kirimkan API Key pada *header* `X-Api-Key` di setiap *request*. Dapatkan *key* (`pk_...`) dari Dashboard Merchant dan simpan aman di *environment variable*.
+* **Webhook Endpoint:** Siapkan *endpoint* di server Anda untuk menerima notifikasi perubahan status transaksi.
 
----
-
-## Alur Dokumen
-
-Baca dokumentasi sesuai urutan berikut:
-
-| # | Topik | Deskripsi |
-|---|-------|-----------|
-| 1 | [Persiapan](./persiapan) | Setup API Key, base URL, rate limit |
-| 2 | [Android Worker](./android-worker) | Install aplikasi deteksi pembayaran |
-| 3 | [Payment Account](./payment-account) | Lihat daftar rekening tujuan |
-| 4 | [Payment Create](./payment-create) | Buat invoice pembayaran |
-| 5 | [Checkout](./checkout) | Halaman bayar untuk customer |
-| 6 | [Payment Detail](./payment-detail) | Detail satu invoice |
-| 7 | [Payment List](./payment-list) | Daftar invoice |
-| 8 | [Payment Cancel](./payment-cancel) | Batalkan invoice |
-| 9 | [Payment Match](./payment-match) | Cocokkan pembayaran manual |
-| 10 | [Payment Mutations](./payment-mutations) | Lihat mutasi terdeteksi |
-| 11 | [Webhook](./webhook) | Setup notifikasi real-time |
-| 12 | [Status & Error Code](./status-code) | Referensi kode error |
+**2. Ketentuan Rate Limit**
+* **Read (GET):** Maksimal 3.000 request/menit.
+* **Write (POST/DELETE):** Maksimal 600 request/menit.
+* Melebihi batas akan mengembalikan error `rate_limited`.
 
 ---
 
-## Daftar Endpoint
+## Android Worker
 
-| Method | Endpoint | Deskripsi |
-|--------|----------|-----------|
-| `GET` | `/gateway/accounts` | Daftar rekening aktif |
-| `POST` | `/gateway/payments` | Buat invoice baru |
-| `GET` | `/gateway/payments` | Daftar invoice |
-| `GET` | `/gateway/payments/:code` | Detail invoice |
-| `DELETE` | `/gateway/payments/:code` | Batalkan invoice |
-| `POST` | `/gateway/payments/:code/match` | Cocokkan manual (butuh 2FA) |
-| `GET` | `/gateway/channels/:id/instructions` | Instruksi pembayaran |
-| `GET` | `/gateway/mutations` | Mutasi bank terdeteksi |
+Worker adalah aplikasi Android yang berfungsi sebagai "mata" sistem untuk membaca notifikasi aplikasi *mobile banking* dan mendeteksi pembayaran masuk secara otomatis.
+
+**Syarat Perangkat:**
+* Gunakan HP Android khusus (bukan HP pribadi) yang selalu menyala, terhubung listrik, dan terkoneksi internet 24 jam.
+* Aplikasi *mobile banking* (BCA Mobile, Livin', dll) wajib terinstal dan aktif di perangkat yang sama.
+
+**Langkah Instalasi:**
+1. Unduh APK dari Dashboard -> menu **Pairing Device**.
+2. Instal di HP khusus, buka aplikasi, dan masukkan API Key.
+3. Login ke Dashboard -> **Pairing Device**, lalu klik **Setujui** pada perangkat yang baru mendaftar.
+4. **Perizinan Wajib:** Berikan izin Notifikasi, Akses Notifikasi (*Notification Access* via *Settings* HP), dan pastikan fitur Optimasi Baterai / Penghemat Daya dinonaktifkan untuk aplikasi Worker.
+5. Worker berjalan normal jika menampilkan notifikasi *"Listening for bank notifications"*.
+
+**Troubleshooting Payment PENDING:**
+Jika pelanggan sudah transfer namun sistem tidak mendeteksi:
+* Periksa apakah HP mati atau internet terputus.
+* Pastikan sistem Android tidak mematikan Worker di latar belakang (cek pengaturan baterai).
+* Pastikan izin *Notification Access* tidak dicabut oleh OS.
+* Pastikan notifikasi transaksi masuk dari aplikasi bank benar-benar muncul di panel notifikasi HP tersebut.

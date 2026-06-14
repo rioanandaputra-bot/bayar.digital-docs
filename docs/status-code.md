@@ -4,97 +4,101 @@ sidebar_position: 13
 
 # Status & Error Code
 
----
+Referensi lengkap mengenai status transaksi, *webhook*, serta kode respons yang digunakan oleh API Bayar Digital.
 
 ## HTTP Status
 
-| Status | Arti |
-|--------|------|
-| `200` | OK |
-| `201` | Created (create payment) |
-| `400` | Bad request / validation error |
-| `401` | API Key kosong atau tidak valid |
-| `403` | Tidak punya akses |
-| `404` | Tidak ditemukan |
-| `409` | Conflict (duplicate, cancel gagal) |
-| `429` | Rate limit |
-| `500` | Server error |
+| Status | Keterangan |
+| :--- | :--- |
+| `200` | **OK** - Permintaan berhasil diproses. |
+| `201` | **Created** - Pembuatan *invoice* berhasil. |
+| `400` | **Bad Request** - Format data salah atau terdapat validasi yang gagal. |
+| `401` | **Unauthorized** - API Key kosong atau tidak valid. |
+| `403` | **Forbidden** - Akses ditolak atau kuota habis. |
+| `404` | **Not Found** - Data atau *endpoint* tidak ditemukan. |
+| `409` | **Conflict** - Duplikasi data atau status tidak sesuai untuk aksi tersebut. |
+| `429` | **Too Many Requests** - Melebihi batas *rate limit*. |
+| `500` | **Internal Server Error** - Terjadi kendala di server Bayar Digital. |
 
 ---
 
-## Status Payment
+## Status Payment & Webhook
 
-| Status | Arti | Terminal |
-|--------|------|----------|
-| `PENDING` | Menunggu pembayaran | Tidak |
-| `PAID` | Terkonfirmasi lunas | Ya |
-| `EXPIRED` | Melewati batas waktu | Ya |
-| `CANCELLED` | Dibatalkan merchant | Ya |
+**Siklus Payment:**
+| Status | Keterangan | Terminal (Final)? |
+| :--- | :--- | :--- |
+| `PENDING` | Menunggu pembayaran dari pelanggan. | Tidak |
+| `PAID` | Pembayaran terkonfirmasi dan lunas. | Ya |
+| `EXPIRED` | Melewati batas waktu pembayaran (`payment_expired_at`). | Ya |
+| `CANCELLED` | Dibatalkan secara manual oleh *merchant*. | Ya |
 
----
-
-## Status Webhook
-
-| Status | Arti |
-|--------|------|
-| `PENDING` | Menunggu dikirim |
-| `RETRYING` | Gagal, akan di-retry |
-| `SUCCESS` | Berhasil (response 2xx dari server kamu) |
-| `FAILED` | Gagal total (melebihi maks retry) |
+**Siklus Webhook:**
+| Status | Keterangan |
+| :--- | :--- |
+| `PENDING` | Masuk antrean, menunggu dikirim ke server Anda. |
+| `RETRYING` | Gagal mengirim, sistem akan mencoba ulang secara berkala. |
+| `SUCCESS` | Berhasil (menerima respons `2xx` dari server Anda). |
+| `FAILED` | Gagal total karena telah melewati batas maksimal percobaan (*retry*). |
 
 ---
 
-## Error Code
+## Daftar Error Code & Panduan Retry
 
-| Code | HTTP | Penyebab | Solusi |
-|------|------|----------|--------|
-| `unauthorized` | 401 | API Key kosong / tidak valid | Kirim `X-Api-Key` yang benar |
-| `tenant_api_key_required` | 403 | API Key bukan merchant tenant | Gunakan API Key dari merchant |
-| `bad_request` | 400 | JSON / body tidak valid | Perbaiki format request |
-| `validation_error` | 400 | Field tidak valid | Cek `errors` di response |
-| `invalid_expired_at` | 400 | Format `payment_expired_at` salah / sudah lewat | Kirim ISO 8601 di masa depan |
-| `not_found` | 404 | Payment tidak ditemukan | Cek `payment_code` |
-| `payment_not_cancellable` | 404 | Payment bukan `PENDING` | Cek status sebelum cancel |
-| `account_not_owned` | 403 | `account_id` bukan milik merchant | Ambil dari `GET /gateway/accounts` |
-| `no_active_quota` | 403 | Kuota akun habis | Top up di Dashboard |
-| `totp_not_enabled` | 403 | 2FA belum diaktifkan | Setup 2FA di pengaturan profil |
-| `payment_code_conflict` | 409 | `payment_code` sudah dipakai | Gunakan kode unik |
-| `unique_amount_conflict` | 409 | Gagal buat nominal unik | Retry beberapa detik lagi |
-| `rate_limited` | 429 | Terlalu banyak request | Tunggu sesuai `X-RateLimit-Reset` |
-| `internal_error` | 500 | Server error | Retry dengan backoff |
+Untuk menghindari pemblokiran, **hanya lakukan sistem *retry* otomatis pada error yang bersifat sementara** (yang ditandai dengan "Ya" pada kolom Bisa Retry).
+
+| Code | HTTP | Penyebab & Solusi | Bisa Retry? |
+| :--- | :--- | :--- | :--- |
+| `unauthorized` | 401 | API Key tidak valid. Periksa kembali *header* `X-Api-Key`. | Tidak |
+| `tenant_api_key_required` | 403 | API Key bukan milik *merchant*. Gunakan akses kunci yang benar. | Tidak |
+| `bad_request` | 400 | Format *request* rusak. Periksa kembali struktur JSON Anda. | Tidak |
+| `validation_error` | 400 | Field tidak valid. Periksa array `errors` pada *response*. | Tidak |
+| `invalid_expired_at` | 400 | Batas waktu sudah lewat/salah format. Kirim waktu di masa depan dengan format ISO 8601. | Tidak |
+| `not_found` | 404 | *Payment* tidak ditemukan. Periksa kembali `payment_code`. | Tidak |
+| `payment_not_cancellable` | 404 | *Payment* bukan `PENDING`. Tidak dapat dibatalkan. | Tidak |
+| `account_not_owned` | 403 | `account_id` salah. Ambil ID yang sah melalui `GET /gateway/accounts`. | Tidak |
+| `no_active_quota` | 403 | Kuota akun habis. Lakukan *top-up* melalui Dashboard. | Tidak |
+| `totp_not_enabled` | 403 | 2FA belum aktif. Konfigurasi 2FA melalui pengaturan profil Anda. | Tidak |
+| `payment_code_conflict` | 409 | `payment_code` duplikat. Gunakan kode yang unik untuk *invoice* baru. | Tidak |
+| `unique_amount_conflict` | 409 | Sistem bentrok saat mengenerate nominal unik. Tunggu sejenak. | **Ya** |
+| `rate_limited` | 429 | Melebihi batas *request*. Tunggu sesuai *header* `X-RateLimit-Reset`. | **Ya** |
+| `internal_error` | 500 | Terjadi gangguan server dari sisi Bayar Digital. | **Ya** |
 
 ---
 
-## Error Handling
+## Contoh Implementasi Retry Otomatis (Aman)
 
-### Retry yang Aman
+Implementasi ini hanya akan melakukan *retry* pada error `429` (Rate Limit) dan `500` (Internal Server Error) menggunakan *delay* yang direkomendasikan.
 
-Hanya retry untuk error **sementara**: `429` (rate limit) dan `500` (server error).
-
+**Node.js**
 ```javascript
 async function callAPI(request, maxRetries = 3) {
   for (let i = 0; i <= maxRetries; i++) {
     const res = await request();
     if (res.status !== 429 && res.status < 500) return res;
+    
+    // Ambil jeda waktu dari header, atau gunakan progressive delay
     const wait = parseInt(res.headers.get('X-RateLimit-Reset') || i + 1, 10);
     await new Promise(r => setTimeout(r, wait * 1000));
   }
-  throw new Error('request failed after retries');
+  throw new Error('Request gagal setelah mencapai batas retry');
 }
 ```
 
+**PHP**
 ```php
 function callAPI(callable $request, int $maxRetries = 3): array {
     for ($i = 0; $i <= $maxRetries; $i++) {
         $res = $request();
         if ($res['status'] !== 429 && $res['status'] < 500) return $res;
+        
         $wait = $res['headers']['X-RateLimit-Reset'] ?? ($i + 1);
         sleep((int) $wait);
     }
-    throw new \RuntimeException('request failed after retries');
+    throw new \RuntimeException('Request gagal setelah mencapai batas retry');
 }
 ```
 
+**Python**
 ```python
 import time
 
@@ -103,34 +107,8 @@ def call_api(request, max_retries=3):
         res = request()
         if res.status_code != 429 and res.status_code < 500:
             return res
+            
         wait = int(res.headers.get('X-RateLimit-Reset', i + 1))
         time.sleep(wait)
-    raise Exception('request failed after retries')
+    raise Exception('Request gagal setelah mencapai batas retry')
 ```
-
-### Error yang JANGAN di-retry otomatis
-
-| Error | Alasan | Tindakan |
-|-------|--------|----------|
-| `payment_code_conflict` (409) | `payment_code` sudah dipakai | Gunakan kode baru |
-| `validation_error` (400) | Field tidak valid | Perbaiki request |
-| `account_not_owned` (403) | `account_id` salah | Ambil dari `GET /gateway/accounts` |
-| `no_active_quota` (403) | Kuota habis | Top up di Dashboard |
-| `payment_not_cancellable` (404) | Status bukan `PENDING` | Cek status dulu |
-| `unique_amount_conflict` (409) | Nominal unik bentrok | Bisa retry setelah beberapa detik |
-
----
-
-## Ringkasan
-
-| Error | Retry? | Aksi |
-|-------|--------|------|
-| `429` Rate limit | Ya | Tunggu `X-RateLimit-Reset` |
-| `500` Server error | Ya | Backoff |
-| `400` Validation | Tidak | Perbaiki request |
-| `409` Duplicate code | Tidak | Pakai kode baru |
-| `409` Unique amount | Ya | Tunggu & retry |
-| `404` Not cancellable | Tidak | Cek status dulu |
-| `403` Account | Tidak | Ambil dari `GET /gateway/accounts` |
-| `401` Unauthorized | Tidak | Periksa API Key |
-

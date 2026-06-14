@@ -6,47 +6,55 @@ import TabItem from '@theme/TabItem';
 
 # Checkout
 
-Halaman publik Bayar Digital untuk customer melakukan pembayaran. Customer **tidak perlu login** atau punya akun.
+Halaman **Checkout** adalah antarmuka publik dari Bayar Digital yang memfasilitasi proses pembayaran. Pelanggan **tidak perlu login** atau memiliki akun untuk dapat menyelesaikan transaksi.
 
-Setelah invoice dibuat, kamu bisa redirect customer ke halaman checkout ini. `payment_checkout_url` diberikan saat create payment sebagai URL absolut penuh.
+Setelah *invoice* berhasil dibuat, sistem Anda dapat langsung mengarahkan (*redirect*) pelanggan ke halaman ini. Tautan `payment_checkout_url` akan diberikan dalam bentuk URL absolut pada *response* saat Anda membuat *payment*.
 
-**Alternatif:** Kalau tidak ingin redirect, kamu bisa tampilkan detail pembayaran (nomor rekening, nominal total, instruksi) di UI kamu sendiri. Ambil data dari response `POST /gateway/payments` atau `GET /gateway/payments/{code}`, lalu pantau status via [Webhook](./webhook).
+**Alternatif Tanpa Redirect:**
+Jika Anda lebih memilih menggunakan antarmuka (UI) aplikasi Anda sendiri, Anda tidak perlu melakukan *redirect*. Cukup ambil detail pembayaran (seperti nomor rekening, nominal total, dan instruksi) dari *response* `POST /gateway/payments` atau `GET /gateway/payments/{code}`, tampilkan di aplikasi Anda, dan pantau status pembayarannya melalui [Webhook](./webhook).
 
 ## Alur Redirect
 
+Berikut adalah gambaran interaksi antara server Anda, Bayar Digital, dan Pelanggan saat menggunakan halaman Checkout:
+
 ```mermaid
 sequenceDiagram
-    participant S as Server Kamu
+    participant S as Server Anda
     participant B as Bayar Digital
-    participant C as Customer
+    participant C as Pelanggan
 
     S->>B: POST /gateway/payments
     B-->>S: checkout_url
     S->>C: Redirect ke checkout_url
     C->>B: Buka halaman checkout
-    C->>C: Transfer / QRIS
+    C->>C: Transfer / Scan QRIS
     B->>S: Webhook: PAID
     B-->>C: Redirect ke return_url
 ```
 
-<table>
-<thead>
-<tr><th>Status</th><th>Tampilan</th></tr>
-</thead>
-<tbody>
-<tr><td>`PENDING`</td><td>Instruksi pembayaran, nominal total, batas waktu mundur</td></tr>
-<tr><td>`PAID`</td><td>Konfirmasi sukses + tombol kembali ke merchant</td></tr>
-<tr><td>`EXPIRED` / `CANCELLED`</td><td>Halaman tidak tersedia</td></tr>
-</tbody>
-</table>
+## Tampilan Berdasarkan Status
 
-**Transfer bank:** menampilkan nomor rekening dan nominal `payment_total`.
-**QRIS:** menampilkan QR Code dinamis dengan nominal spesifik.
+Halaman *checkout* akan menyesuaikan tampilannya berdasarkan status pembayaran saat ini:
 
-### return_url
+| Status Pembayaran | Tampilan Halaman |
+| :--- | :--- |
+| `PENDING` | Menampilkan instruksi pembayaran, nominal total yang harus dibayar, dan *countdown* batas waktu pembayaran. |
+| `PAID` | Menampilkan halaman konfirmasi sukses beserta tombol untuk kembali ke *merchant*. |
+| `EXPIRED` / `CANCELLED` | Halaman tidak tersedia atau menampilkan informasi bahwa tautan sudah tidak berlaku. |
 
-- Customer otomatis redirect ke `return_url` setelah status `PAID`
-- Parameter `?payment_code={payment_code}` otomatis ditambahkan
-- Hanya HTTPS yang diizinkan
+### Detail Metode Pembayaran
+* **Transfer Bank:** Menampilkan nomor rekening tujuan dan nominal pasti (`payment_total`).
+* **QRIS:** Menampilkan QR Code dinamis dengan nominal yang sudah tertanam secara spesifik.
 
-**Jangan** jadikan redirect sebagai sumber kebenaran. Gunakan **webhook** untuk memastikan status payment.
+---
+
+## Return URL (`return_url`)
+
+Anda dapat menentukan ke mana pelanggan akan diarahkan setelah pembayaran berhasil dengan mengatur `return_url`. 
+
+* Pelanggan akan dialihkan secara otomatis ke `return_url` setelah status transaksi berubah menjadi `PAID`.
+* Parameter `?payment_code={payment_code}` akan ditambahkan secara otomatis pada URL akhir.
+* **Syarat:** Hanya URL dengan protokol **HTTPS** yang diizinkan untuk alasan keamanan.
+
+**Catatan Penting:**
+**Jangan pernah** menjadikan *redirect* pelanggan ke `return_url` sebagai sumber kebenaran (Source of Truth) untuk memperbarui status transaksi di *database* Anda. Selalu gunakan **[Webhook](./webhook)** untuk memverifikasi dan memastikan bahwa pembayaran benar-benar telah berhasil (*PAID*).

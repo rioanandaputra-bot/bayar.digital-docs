@@ -6,60 +6,60 @@ import TabItem from '@theme/TabItem';
 
 # Payment Detail
 
-Mendapatkan detail satu invoice berdasarkan `payment_code` dari sistem kamu.
+Mengambil detail spesifik dari sebuah *invoice* berdasarkan `payment_code` yang terdaftar di sistem Anda.
 
-Untuk daftar invoice, lihat halaman [Payment List](./payment-list).
+Untuk melihat daftar keseluruhan *invoice*, silakan merujuk pada halaman [Payment List](./payment-list).
 
-Gunakan endpoint ini untuk mengecek status invoice kapan saja. Untuk update status real-time, setup [Webhook](./webhook).
+Gunakan *endpoint* ini untuk memeriksa status *invoice* kapan saja. Untuk mendapatkan pembaruan status secara *real-time*, kami sangat menyarankan Anda untuk mengatur [Webhook](./webhook).
 
-Lihat [Status & Error Code](./status-code) untuk daftar lengkap status payment.
+Silakan lihat halaman [Status & Error Code](./status-code) untuk melihat daftar lengkap status pembayaran.
 
 ## Request
 
 <Tabs>
   <TabItem value="endpoint" label="Endpoint">
     <table>
-    <thead>
-    <tr><th>Method</th><th>URL</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`GET`</td><td>`https://api.bayar.digital/gateway/payments/{payment_code}`</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Method</th><th>URL</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`GET`</td><td>`https://api.bayar.digital/gateway/payments/{payment_code}`</td></tr>
+      </tbody>
     </table>
   </TabItem>
-  <TabItem value="param" label="Param">
+  <TabItem value="param" label="Parameter">
     <table>
-    <thead>
-    <tr><th>Parameter</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`payment_code`</td><td>string</td><td>Ya</td><td>Kode invoice dari sistem kamu</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Parameter</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`payment_code`</td><td>string</td><td>Ya</td><td>Kode *invoice* dari sistem Anda</td></tr>
+      </tbody>
     </table>
   </TabItem>
   <TabItem value="header" label="Header">
     <table>
-    <thead>
-    <tr><th>Header</th><th>Wajib</th><th>Deskripsi</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`X-Api-Key`</td><td>Ya</td><td>API Key merchant</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Header</th><th>Wajib</th><th>Deskripsi</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`X-Api-Key`</td><td>Ya</td><td>API Key *merchant* Anda</td></tr>
+      </tbody>
     </table>
   </TabItem>
   <TabItem value="body" label="Body">
     <table>
-    <thead>
-    <tr><th>Field</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
-    </thead>
-    <tbody>
-    <tr><td colspan="4">Tidak ada body.</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Field</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="4">Tidak ada *body* pada *request* ini.</td></tr>
+      </tbody>
     </table>
   </TabItem>
   <TabItem value="contoh" label="Contoh" default>
-    ```bash
-    curl https://api.bayar.digital/gateway/payments/INV-2026-0001 \
+```bash
+    curl [https://api.bayar.digital/gateway/payments/INV-2026-0001](https://api.bayar.digital/gateway/payments/INV-2026-0001) \
       -H "X-Api-Key: pk_..."
     ```
   </TabItem>
@@ -70,40 +70,40 @@ Lihat [Status & Error Code](./status-code) untuk daftar lengkap status payment.
 <Tabs>
   <TabItem value="sukses" label="Sukses" default>
     <table>
-    <thead>
-    <tr><th>Field</th><th>Tipe</th><th>Deskripsi</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`payment_id`</td><td>uuid</td><td>ID unik invoice</td></tr>
-    <tr><td>`payment_code`</td><td>string</td><td>Kode invoice dari sistem kamu</td></tr>
-    <tr><td>`payment_amount`</td><td>int64</td><td>Nominal asli (tanpa nominal unik)</td></tr>
-    <tr><td>`payment_unique`</td><td>int64</td><td>Nominal unik (1-999)</td></tr>
-    <tr><td>`payment_total`</td><td>int64</td><td>**Total yang harus dibayar** = amount + unique</td></tr>
-    <tr><td>`payment_status`</td><td>string</td><td>`PENDING` / `PAID` / `EXPIRED` / `CANCELLED`</td></tr>
-    <tr><td>`payment_expired_at`</td><td>datetime</td><td>Batas waktu pembayaran</td></tr>
-    <tr><td>`payment_updated_at`</td><td>datetime</td><td>Waktu update terakhir</td></tr>
-    <tr><td>`payment_webhook_url`</td><td>string/null</td><td>Webhook endpoint invoice ini</td></tr>
-    <tr><td>`payment_checkout_url`</td><td>string</td><td>URL halaman checkout publik</td></tr>
-    <tr><td>`payment_return_url`</td><td>string/null</td><td>Redirect URL</td></tr>
-    <tr><td>`customer_name`</td><td>string/null</td><td>Nama customer</td></tr>
-    <tr><td>`customer_email`</td><td>string/null</td><td>Email customer</td></tr>
-    <tr><td>`customer_phone`</td><td>string/null</td><td>Telepon customer</td></tr>
-    <tr><td>`customer_orders`</td><td>array/null</td><td>Item pesanan</td></tr>
-    <tr><td>`account_id`</td><td>uuid</td><td>ID akun tujuan</td></tr>
-    <tr><td>`account_number`</td><td>string/null</td><td>Nomor rekening / QRIS URL</td></tr>
-    <tr><td>`account_name`</td><td>string/null</td><td>Nama pemilik rekening</td></tr>
-    <tr><td>`channel_id`</td><td>uuid/null</td><td>ID channel</td></tr>
-    <tr><td>`channel_name`</td><td>string/null</td><td>Nama bank</td></tr>
-    <tr><td>`channel_type`</td><td>string/null</td><td>`TRANSFER` / `QRIS`</td></tr>
-    <tr><td>`channel_instructions`</td><td>array</td><td>Instruksi pembayaran</td></tr>
-    <tr><td>`is_manual_match`</td><td>bool</td><td>Dicocokkan manual?</td></tr>
-    <tr><td>`manual_matched_mutation_id`</td><td>uuid/null</td><td>ID mutasi terkait (jika manual match)</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Field</th><th>Tipe</th><th>Deskripsi</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`payment_id`</td><td>uuid</td><td>ID unik *invoice*</td></tr>
+        <tr><td>`payment_code`</td><td>string</td><td>Kode *invoice* dari sistem Anda</td></tr>
+        <tr><td>`payment_amount`</td><td>int64</td><td>Nominal asli (tanpa kode unik)</td></tr>
+        <tr><td>`payment_unique`</td><td>int64</td><td>Kode unik pembayaran (1-999)</td></tr>
+        <tr><td>`payment_total`</td><td>int64</td><td>**Total yang harus dibayar** = `amount` + `unique`</td></tr>
+        <tr><td>`payment_status`</td><td>string</td><td>`PENDING` / `PAID` / `EXPIRED` / `CANCELLED`</td></tr>
+        <tr><td>`payment_expired_at`</td><td>datetime</td><td>Batas waktu pembayaran</td></tr>
+        <tr><td>`payment_updated_at`</td><td>datetime</td><td>Waktu pembaruan terakhir</td></tr>
+        <tr><td>`payment_webhook_url`</td><td>string/null</td><td>URL Webhook khusus untuk *invoice* ini</td></tr>
+        <tr><td>`payment_checkout_url`</td><td>string</td><td>URL halaman *checkout* publik</td></tr>
+        <tr><td>`payment_return_url`</td><td>string/null</td><td>URL untuk *redirect* pelanggan</td></tr>
+        <tr><td>`customer_name`</td><td>string/null</td><td>Nama pelanggan</td></tr>
+        <tr><td>`customer_email`</td><td>string/null</td><td>Email pelanggan</td></tr>
+        <tr><td>`customer_phone`</td><td>string/null</td><td>Nomor telepon pelanggan</td></tr>
+        <tr><td>`customer_orders`</td><td>array/null</td><td>Daftar item pesanan pelanggan</td></tr>
+        <tr><td>`account_id`</td><td>uuid</td><td>ID akun tujuan penerima dana</td></tr>
+        <tr><td>`account_number`</td><td>string/null</td><td>Nomor rekening / URL QRIS</td></tr>
+        <tr><td>`account_name`</td><td>string/null</td><td>Nama pemilik rekening</td></tr>
+        <tr><td>`channel_id`</td><td>uuid/null</td><td>ID *channel* pembayaran</td></tr>
+        <tr><td>`channel_name`</td><td>string/null</td><td>Nama bank / metode pembayaran</td></tr>
+        <tr><td>`channel_type`</td><td>string/null</td><td>`TRANSFER` / `QRIS`</td></tr>
+        <tr><td>`channel_instructions`</td><td>array</td><td>Langkah-langkah atau instruksi pembayaran</td></tr>
+        <tr><td>`is_manual_match`</td><td>bool</td><td>Indikator apakah transaksi dicocokkan secara manual</td></tr>
+        <tr><td>`manual_matched_mutation_id`</td><td>uuid/null</td><td>ID mutasi terkait (jika dicocokkan secara manual)</td></tr>
+      </tbody>
     </table>
 
     **200 OK**
 
-    ```json
+```json
     {
       "success": true,
       "message": "ok",
@@ -116,9 +116,9 @@ Lihat [Status & Error Code](./status-code) untuk daftar lengkap status payment.
         "payment_status": "PAID",
         "payment_expired_at": "2026-10-11T12:00:00Z",
         "payment_updated_at": "2026-06-11T10:05:00Z",
-        "payment_webhook_url": "https://yourserver.com/webhooks/bayar",
-        "payment_checkout_url": "https://bayar.digital/checkout/660e8400-e29b-41d4-a716-446655440010",
-        "payment_return_url": "https://yourserver.com/orders/INV-2026-0001",
+        "payment_webhook_url": "[https://yourserver.com/webhooks/bayar](https://yourserver.com/webhooks/bayar)",
+        "payment_checkout_url": "[https://bayar.digital/checkout/660e8400-e29b-41d4-a716-446655440010](https://bayar.digital/checkout/660e8400-e29b-41d4-a716-446655440010)",
+        "payment_return_url": "[https://yourserver.com/orders/INV-2026-0001](https://yourserver.com/orders/INV-2026-0001)",
         "customer_name": "Budi Santoso",
         "customer_email": "budi@example.com",
         "customer_phone": "081234567890",
@@ -145,24 +145,24 @@ Lihat [Status & Error Code](./status-code) untuk daftar lengkap status payment.
   </TabItem>
   <TabItem value="gagal" label="Gagal">
     <table>
-    <thead>
-    <tr><th>Code</th><th>Status</th><th>Artinya</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`tenant_api_key_required`</td><td>403</td><td>API Key tidak valid</td></tr>
-    <tr><td>`not_found`</td><td>404</td><td>`payment_code` tidak ditemukan</td></tr>
-    <tr><td>`internal_error`</td><td>500</td><td>Server error, coba lagi</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Code</th><th>Status</th><th>Keterangan</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`tenant_api_key_required`</td><td>403</td><td>API Key tidak valid atau tidak disertakan</td></tr>
+        <tr><td>`not_found`</td><td>404</td><td>`payment_code` tidak ditemukan di dalam sistem</td></tr>
+        <tr><td>`internal_error`</td><td>500</td><td>Terjadi kendala pada server, silakan coba beberapa saat lagi</td></tr>
+      </tbody>
     </table>
 
     **404 Not Found**
 
-    ```json
+```json
     {
       "success": false,
       "code": "not_found",
       "message": "payment not found"
     }
     ```
-  </TabItem>
+</TabItem>
 </Tabs>

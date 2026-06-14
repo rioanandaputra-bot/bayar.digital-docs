@@ -6,61 +6,61 @@ import TabItem from '@theme/TabItem';
 
 # Payment List
 
-Mendapatkan daftar invoice, diurutkan dari terbaru.
+Mengambil daftar seluruh *invoice*, yang diurutkan mulai dari data yang paling baru dibuat.
 
-Untuk detail satu invoice, lihat halaman [Payment Detail](./payment-detail).
+Untuk melihat detail spesifik dari sebuah *invoice* tunggal, silakan kunjungi halaman [Payment Detail](./payment-detail).
 
-Gunakan endpoint ini untuk rekonsiliasi atau menampilkan history transaksi.
+Gunakan *endpoint* ini untuk keperluan rekonsiliasi data secara massal atau untuk menampilkan riwayat transaksi di dasbor sistem Anda. 
 
-Lihat [Status & Error Code](./status-code) untuk daftar lengkap status payment.
+Silakan merujuk pada halaman [Status & Error Code](./status-code) untuk melihat daftar lengkap status pembayaran yang tersedia.
 
 ## Request
 
 <Tabs>
   <TabItem value="endpoint" label="Endpoint">
     <table>
-    <thead>
-    <tr><th>Method</th><th>URL</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`GET`</td><td>`https://api.bayar.digital/gateway/payments`</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Method</th><th>URL</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`GET`</td><td>`https://api.bayar.digital/gateway/payments`</td></tr>
+      </tbody>
     </table>
   </TabItem>
-  <TabItem value="param" label="Param">
+  <TabItem value="param" label="Parameter">
     <table>
-    <thead>
-    <tr><th>Parameter</th><th>Tipe</th><th>Default</th><th>Maks</th><th>Deskripsi</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`page`</td><td>integer</td><td>1</td><td>—</td><td>Halaman</td></tr>
-    <tr><td>`per_page`</td><td>integer</td><td>20</td><td>100</td><td>Data per halaman</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Parameter</th><th>Tipe</th><th>Default</th><th>Maks</th><th>Deskripsi</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`page`</td><td>integer</td><td>1</td><td>—</td><td>Halaman data yang ingin ditampilkan</td></tr>
+        <tr><td>`per_page`</td><td>integer</td><td>20</td><td>100</td><td>Jumlah data yang ditarik per halaman</td></tr>
+      </tbody>
     </table>
   </TabItem>
   <TabItem value="header" label="Header">
     <table>
-    <thead>
-    <tr><th>Header</th><th>Wajib</th><th>Deskripsi</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`X-Api-Key`</td><td>Ya</td><td>API Key merchant</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Header</th><th>Wajib</th><th>Deskripsi</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`X-Api-Key`</td><td>Ya</td><td>API Key *merchant* Anda</td></tr>
+      </tbody>
     </table>
   </TabItem>
   <TabItem value="body" label="Body">
     <table>
-    <thead>
-    <tr><th>Field</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
-    </thead>
-    <tbody>
-    <tr><td colspan="4">Tidak ada body.</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Field</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="4">Tidak ada *body* pada *request* ini.</td></tr>
+      </tbody>
     </table>
   </TabItem>
   <TabItem value="contoh" label="Contoh" default>
-    ```bash
-    curl "https://api.bayar.digital/gateway/payments?page=1&per_page=20" \
+```bash
+    curl "[https://api.bayar.digital/gateway/payments?page=1&per_page=20](https://api.bayar.digital/gateway/payments?page=1&per_page=20)" \
       -H "X-Api-Key: pk_..."
     ```
   </TabItem>
@@ -71,21 +71,21 @@ Lihat [Status & Error Code](./status-code) untuk daftar lengkap status payment.
 <Tabs>
   <TabItem value="sukses" label="Sukses" default>
     <table>
-    <thead>
-    <tr><th>Field Pagination</th><th>Tipe</th><th>Deskripsi</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`total`</td><td>int</td><td>Total data</td></tr>
-    <tr><td>`count`</td><td>int</td><td>Data di halaman ini</td></tr>
-    <tr><td>`per_page`</td><td>int</td><td>Data per halaman</td></tr>
-    <tr><td>`current_page`</td><td>int</td><td>Halaman saat ini</td></tr>
-    <tr><td>`total_pages`</td><td>int</td><td>Total halaman</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Field Pagination</th><th>Tipe</th><th>Deskripsi</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`total`</td><td>int</td><td>Total keseluruhan data yang ada</td></tr>
+        <tr><td>`count`</td><td>int</td><td>Jumlah data yang ditarik pada halaman saat ini</td></tr>
+        <tr><td>`per_page`</td><td>int</td><td>Batas maksimal data per halaman</td></tr>
+        <tr><td>`current_page`</td><td>int</td><td>Posisi halaman saat ini</td></tr>
+        <tr><td>`total_pages`</td><td>int</td><td>Total keseluruhan halaman yang tersedia</td></tr>
+      </tbody>
     </table>
 
     **200 OK**
 
-    ```json
+```json
     {
       "success": true,
       "data": [
@@ -98,9 +98,9 @@ Lihat [Status & Error Code](./status-code) untuk daftar lengkap status payment.
           "payment_status": "PAID",
           "payment_expired_at": "2026-10-11T12:00:00Z",
           "payment_updated_at": "2026-06-11T10:05:00Z",
-          "payment_webhook_url": "https://yourserver.com/webhooks/bayar",
-          "payment_checkout_url": "https://bayar.digital/checkout/660e8400-e29b-41d4-a716-446655440010",
-          "payment_return_url": "https://yourserver.com/orders/INV-2026-0001",
+          "payment_webhook_url": "[https://yourserver.com/webhooks/bayar](https://yourserver.com/webhooks/bayar)",
+          "payment_checkout_url": "[https://bayar.digital/checkout/660e8400-e29b-41d4-a716-446655440010](https://bayar.digital/checkout/660e8400-e29b-41d4-a716-446655440010)",
+          "payment_return_url": "[https://yourserver.com/orders/INV-2026-0001](https://yourserver.com/orders/INV-2026-0001)",
           "customer_name": "Budi Santoso",
           "customer_email": "budi@example.com",
           "customer_phone": "081234567890",
@@ -128,18 +128,18 @@ Lihat [Status & Error Code](./status-code) untuk daftar lengkap status payment.
   </TabItem>
   <TabItem value="gagal" label="Gagal">
     <table>
-    <thead>
-    <tr><th>Code</th><th>Status</th><th>Artinya</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`tenant_api_key_required`</td><td>403</td><td>API Key tidak valid</td></tr>
-    <tr><td>`internal_error`</td><td>500</td><td>Server error, coba lagi</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Code</th><th>Status</th><th>Keterangan</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`tenant_api_key_required`</td><td>403</td><td>API Key tidak valid atau tidak disertakan</td></tr>
+        <tr><td>`internal_error`</td><td>500</td><td>Terjadi kendala pada server, silakan coba beberapa saat lagi</td></tr>
+      </tbody>
     </table>
 
     **500 Internal Server Error**
 
-    ```json
+```json
     {
       "success": false,
       "code": "internal_error",

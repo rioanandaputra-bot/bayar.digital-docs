@@ -4,37 +4,39 @@ sidebar_position: 12
 
 # Webhook
 
-Bayar Digital mengirim **HTTP POST** ke server kamu saat status payment berubah.
+Bayar Digital akan mengirimkan *request HTTP POST* ke server Anda setiap kali terjadi perubahan status pembayaran.
 
-Ini adalah cara utama untuk mendapat notifikasi real-time. Webhook lebih cepat dan andal daripada polling manual.
+Webhook merupakan metode utama untuk mendapatkan notifikasi secara *real-time*. Metode ini jauh lebih cepat, efisien, dan andal dibandingkan dengan melakukan pengecekan status ( *polling* ) secara manual.
 
 ---
 
 ## Setup
 
-Webhook URL dikonfigurasi di Dashboard Tenant pada menu **Merchant**. Kamu bisa:
+Anda dapat mengonfigurasi *Webhook URL* melalui Dashboard pada menu **Merchant**. Terdapat dua metode penentuan URL yang bisa Anda gunakan:
 
-1. **Webhook URL default** di level Merchant — semua notifikasi dikirim ke URL ini
-2. **Override per invoice** — kirim `payment_webhook_url` saat `POST /gateway/payments`
+1. **Webhook URL Default (Level Merchant):** Semua notifikasi pembayaran akan dikirimkan secara terpusat ke URL ini.
+2. **Override per Invoice:** Anda dapat mengirimkan *webhook* ke URL spesifik untuk setiap transaksi dengan menyertakan parameter `payment_webhook_url` pada saat memanggil *endpoint* `POST /gateway/payments`.
 
-Selain URL, kamu juga bisa mengatur **Webhook Secret** untuk verifikasi signature.
+Selain mengatur URL, Anda juga sangat disarankan untuk mengatur **Webhook Secret** guna keperluan verifikasi keamanan ( *signature* ).
 
 ---
 
 ## Event
 
-Webhook dikirim pada event berikut:
+Webhook akan dikirimkan secara otomatis pada kondisi/ *event* berikut:
 
 | Event | Status Baru | Keterangan |
-|-------|-------------|------------|
-| Customer bayar | `PAID` | Terdeteksi otomatis oleh sistem |
-| Manual match | `PAID` | Kamu cocokkan manual via API/Dashboard |
-| Kedaluwarsa | `EXPIRED` | Melewati `payment_expired_at` |
-| Dibatalkan | `CANCELLED` | Kamu batalkan via API/Dashboard |
+| :--- | :--- | :--- |
+| Pelanggan Membayar | `PAID` | Pembayaran terdeteksi secara otomatis oleh sistem (Android Worker) |
+| Pencocokan Manual | `PAID` | Anda mencocokkan mutasi pembayaran secara manual via API atau Dashboard |
+| Kedaluwarsa | `EXPIRED` | Waktu pembayaran telah melewati batas `payment_expired_at` |
+| Dibatalkan | `CANCELLED` | *Invoice* dibatalkan secara manual via API atau Dashboard |
 
 ---
 
 ## Payload
+
+Berikut adalah contoh bentuk *payload* (data JSON) yang akan dikirimkan ke server Anda:
 
 ```json
 {
@@ -46,17 +48,17 @@ Webhook dikirim pada event berikut:
 }
 ```
 
-### Field
+### Detail Field
 
 | Field | Tipe | Deskripsi |
-|-------|------|-----------|
-| `payment_id` | uuid | ID invoice |
-| `payment_code` | string | Kode invoice dari sistem kamu |
-| `status` | string | `PAID` / `EXPIRED` / `CANCELLED` |
-| `amount` | int64 | **Total** yang dibayar (original + nominal unik) |
-| `paid_at` | datetime | Waktu bayar (ISO 8601). Ada hanya jika `PAID` |
+| :--- | :--- | :--- |
+| `payment_id` | uuid | ID unik *invoice* di sistem Bayar Digital |
+| `payment_code` | string | Kode *invoice* internal dari sistem Anda |
+| `status` | string | Status pembayaran saat ini: `PAID` / `EXPIRED` / `CANCELLED` |
+| `amount` | int64 | **Total akhir** yang harus dibayar (nominal asli + kode unik) |
+| `paid_at` | datetime | Waktu pembayaran sukses (ISO 8601). Hanya muncul jika status `PAID` |
 
-### Contoh per Status
+### Contoh Berdasarkan Status
 
 **PAID:**
 ```json
@@ -93,16 +95,17 @@ Webhook dikirim pada event berikut:
 
 ## Signature Verification
 
-Jika kamu mengisi **Webhook Secret** di Dashboard, setiap request webhook akan menyertakan header:
+Apabila Anda telah mengatur **Webhook Secret** di Dashboard, setiap *request webhook* dari Bayar Digital akan menyertakan *header* keamanan tambahan:
 
-```
+```text
 X-Signature: <hex_hmac_sha256>
 ```
 
-Signature dihitung sebagai **HMAC-SHA256** dari *raw JSON body* menggunakan Webhook Secret.
+*Signature* ini dihitung menggunakan metode **HMAC-SHA256** dari *raw JSON body* menggunakan Webhook Secret Anda. Hal ini berfungsi untuk memastikan bahwa *request* benar-benar berasal dari Bayar Digital.
 
-### Cara Verifikasi
+### Cara Melakukan Verifikasi
 
+**Contoh (Node.js)**
 ```javascript
 const crypto = require('crypto');
 
@@ -115,6 +118,7 @@ function verifyWebhook(body, signature, secret) {
 }
 ```
 
+**Contoh (PHP)**
 ```php
 function verifyWebhook($body, $signature, $secret) {
     $expected = hash_hmac('sha256', json_encode($body), $secret);
@@ -122,6 +126,7 @@ function verifyWebhook($body, $signature, $secret) {
 }
 ```
 
+**Contoh (Python)**
 ```python
 import hmac, hashlib, json
 
@@ -138,17 +143,15 @@ def verify_webhook(body, signature, secret):
 
 ## Handler Requirements
 
-Endpoint webhook kamu harus:
+Agar proses pengiriman *webhook* berjalan lancar, *endpoint* di server Anda **wajib** memenuhi kriteria berikut:
 
-1. **Verifikasi signature** — jika menggunakan Webhook Secret
-2. **Validasi payment_code** — pastikan terdaftar di sistem kamu
-3. **Validasi amount** — cocokkan dengan `payment_total` yang kamu simpan
-4. **Idempotent** — aman dipanggil berkali-kali
-5. **Balas 200 OK** — secepat mungkin
+1. **Verifikasi Signature:** Lakukan verifikasi keamanan jika menggunakan Webhook Secret.
+2. **Validasi `payment_code`:** Pastikan kode tersebut benar-benar terdaftar di dalam sistem Anda.
+3. **Validasi `amount`:** Cocokkan nominal `amount` dari *webhook* dengan total tagihan (`payment_total`) yang tercatat di *database* Anda.
+4. **Bersifat Idempotent:** Sistem harus aman meskipun menerima *webhook* yang sama berkali-kali.
+5. **Balas dengan `200 OK` Secepat Mungkin:** Jangan menahan koneksi. Jika proses pembaruan data di sistem Anda memakan waktu lama, simpan *payload webhook* ke dalam *queue* (antrean), berikan respons `200 OK` ke Bayar Digital, lalu jalankan proses pembaruan secara *asynchronous*.
 
-Jika proses update order butuh waktu lama, simpan payload ke antrean dulu, balas `200 OK`, lalu proses async.
-
-### Contoh Lengkap (Node.js)
+### Contoh Lengkap (Node.js / Express)
 
 ```javascript
 app.post('/webhooks/bayar', express.json(), (req, res) => {
@@ -165,15 +168,15 @@ app.post('/webhooks/bayar', express.json(), (req, res) => {
 
   const { payment_id, payment_code, status, amount } = req.body;
 
-  // 2. Cari order di DB
+  // 2. Cari order di database
   // 3. Validasi amount
-  // 4. Update status (idempotent)
+  // 4. Update status (pastikan penanganan bersifat idempotent)
 
   res.json({ status: 'received' });
 });
 ```
 
-### Contoh Lengkap (PHP)
+### Contoh Lengkap (PHP / Laravel)
 
 ```php
 Route::post('webhooks/bayar', function (Request $request) {
@@ -192,13 +195,13 @@ Route::post('webhooks/bayar', function (Request $request) {
         'amount' => 'required|integer',
     ]);
 
-    // Cari order, validasi amount, update status (idempotent)
+    // Cari order di database, validasi amount, dan update status (idempotent)
 
     return response()->json(['status' => 'received']);
 });
 ```
 
-### Contoh Lengkap (Python)
+### Contoh Lengkap (Python / FastAPI)
 
 ```python
 @app.post("/webhooks/bayar")
@@ -209,10 +212,11 @@ async def webhook(request: Request):
     if secret:
         expected = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
         if not hmac.compare_digest(expected, request.headers.get("x-signature", "")):
-            raise HTTPException(401, "invalid signature")
+            raise HTTPException(status_code=401, detail="invalid signature")
 
     data = await request.json()
-    # Cari order, validasi amount, update status (idempotent)
+    
+    # Cari order di database, validasi amount, dan update status (idempotent)
 
     return {"status": "received"}
 ```
@@ -221,49 +225,43 @@ async def webhook(request: Request):
 
 ## Retry Logic
 
-Jika endpoint kamu tidak membalas `2xx`, sistem akan retry secara otomatis:
+Jika *endpoint* Anda gagal memberikan respons `2xx` (misal: RTO, *error 500*), sistem Bayar Digital akan mencoba mengirim ulang ( *retry* ) *webhook* secara bertahap:
 
-| Retry ke- | Jeda |
-|-----------|------|
-| 1 | 60 detik |
-| 2 | 120 detik |
-| 3 | 240 detik |
-| 4 | 480 detik |
-| 5 | 960 detik |
+| Upaya (Retry) | Jeda Waktu Tunggu |
+| :--- | :--- |
+| Ke-1 | 60 detik |
+| Ke-2 | 120 detik |
+| Ke-3 | 240 detik |
+| Ke-4 | 480 detik |
+| Ke-5 | 960 detik |
 
-Setelah 5 kali gagal, webhook dianggap **FAILED** dan berhenti di-retry otomatis. Kamu bisa kirim ulang manual dari Dashboard.
+Setelah mengalami 5 kali kegagalan, *webhook* tersebut akan ditandai dengan status **FAILED** dan sistem akan menghentikan proses *retry* otomatis. Namun, Anda tetap dapat memicu pengiriman ulang secara manual melalui Dashboard.
 
 ---
 
 ## Idempotency
 
-Webhook bisa terkirim lebih dari sekali. Pastikan handler kamu aman:
+*Webhook* memiliki kemungkinan terkirim lebih dari satu kali untuk transaksi yang sama. Pastikan penanganan (*handler*) di sistem Anda sudah dirancang dengan aman:
 
-- Jika order sudah `PAID` → abaikan webhook `PAID` berikutnya
-- Jangan ubah status `PAID` kembali ke `PENDING` atau status lain
-- Log semua payload untuk audit
-- Gunakan `payment_id` sebagai key idempotent
+* Apabila pesanan sudah berstatus `PAID` di *database* Anda, abaikan *request webhook* `PAID` berikutnya untuk pesanan tersebut.
+* Jangan pernah mengubah status dari `PAID` kembali menjadi `PENDING`.
+* Selalu simpan log seluruh *payload webhook* yang masuk untuk keperluan audit data.
+* Gunakan `payment_id` atau `payment_code` sebagai kunci ( *key* ) untuk menjaga idempotensi sistem Anda.
 
 ---
 
 ## Troubleshooting
 
-### Webhook selalu gagal?
+### Webhook selalu berstatus GAGAL (FAILED)?
 
-| Kemungkinan | Solusi |
-|-------------|--------|
-| URL tidak bisa diakses dari internet | Pastikan endpoint kamu publik |
-| Response bukan 2xx | Balas `200 OK` setelah terima |
-| Timeout > 15 detik | Simpan ke queue, balas cepat |
-| SSL certificate tidak valid | Pastikan HTTPS valid |
+| Kemungkinan Penyebab | Solusi |
+| :--- | :--- |
+| URL tidak dapat diakses dari internet | Pastikan *endpoint* Anda bersifat publik dan tidak terhalang *firewall* atau VPN lokal |
+| Respons bukan 2xx | Pastikan sistem Anda segera membalas dengan HTTP Status `200 OK` setelah menerima *request* |
+| Terjadi Timeout (> 15 detik) | Jangan memproses logika kompleks di dalam siklus *request*. Simpan data ke *queue*, lalu balas `200 OK` dengan cepat |
+| Sertifikat SSL tidak valid | Pastikan server Anda menggunakan sertifikat SSL (HTTPS) yang sah dan aktif |
 
-### Cara cek riwayat webhook
+### Cara Memeriksa Riwayat Webhook
 
-Gunakan endpoint di Dashboard:
-
-| Method | Endpoint | Deskripsi |
-|--------|----------|-----------|
-| `GET` | `/tenant/callbacks` | Riwayat semua webhook |
-| `GET` | `/tenant/callbacks/:id` | Detail webhook |
-| `POST` | `/tenant/callbacks/:id/retry` | Kirim ulang webhook |
-
+Masuk ke **Dashboard** → Menu **Payment** → Buka tab **Paid**. 
+Apabila pembayaran telah berhasil diproses (*PAID*) dan *webhook* telah sukses terkirim ke server Anda, transaksi tersebut akan berpindah dan dapat dilihat di tab **Completed**.

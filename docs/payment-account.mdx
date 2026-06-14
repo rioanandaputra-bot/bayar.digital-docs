@@ -1,61 +1,54 @@
 ---
 sidebar_position: 4
 ---
+
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 # Payment Account
 
-Melihat daftar rekening aktif yang tersedia untuk digunakan sebagai tujuan pembayaran.
+Endpoint ini digunakan untuk mengambil daftar rekening Anda yang tersedia sebagai tujuan pembayaran. 
 
-Sebelum membuat invoice, kamu perlu tahu rekening tujuan mana yang tersedia. Gunakan `account_id` dari response ini saat [Payment Create](./payment-create).
+Sebelum membuat invoice, Anda perlu memastikan ketersediaan rekening tujuan. Gunakan nilai `account_id` dari respons endpoint ini sebagai parameter saat melakukan [Payment Create](./payment-create). 
+
+**Penting:**
+* Anda hanya dapat membuat pembayaran jika status `account_active = true` dan `account_quota > 0`.
+* **Sistem Kuota Hari:** Anda dapat melakukan *Top Up / Renew* Kuota Hari melalui Dashboard. Kuota hanya akan berkurang **1 (satu)** apabila akun digunakan untuk membuat pembayaran pada hari tersebut, terlepas dari seberapa banyak request atau nominal pembayarannya. Jika tidak digunakan sama sekali pada hari itu, kuota Anda tidak akan berkurang.
+
+---
 
 ## Request
 
 <Tabs>
   <TabItem value="endpoint" label="Endpoint">
     <table>
-    <thead>
-    <tr><th>Method</th><th>URL</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`GET`</td><td>`https://api.bayar.digital/gateway/accounts`</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Method</th><th>URL</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`GET`</td><td>`https://api.bayar.digital/gateway/accounts`</td></tr>
+      </tbody>
     </table>
   </TabItem>
-  <TabItem value="param" label="Param">
-    <table>
-    <thead>
-    <tr><th>Parameter</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
-    </thead>
-    <tbody>
-    <tr><td colspan="4">Tidak ada parameter.</td></tr>
-    </tbody>
-    </table>
+  <TabItem value="param" label="Parameter">
+    *Tidak ada parameter yang dibutuhkan.*
   </TabItem>
   <TabItem value="header" label="Header">
     <table>
-    <thead>
-    <tr><th>Header</th><th>Wajib</th><th>Deskripsi</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`X-Api-Key`</td><td>Ya</td><td>API Key merchant</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Header</th><th>Wajib</th><th>Deskripsi</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`X-Api-Key`</td><td>Ya</td><td>API Key merchant Anda</td></tr>
+      </tbody>
     </table>
   </TabItem>
   <TabItem value="body" label="Body">
-    <table>
-    <thead>
-    <tr><th>Field</th><th>Tipe</th><th>Wajib</th><th>Deskripsi</th></tr>
-    </thead>
-    <tbody>
-    <tr><td colspan="4">Tidak ada body.</td></tr>
-    </tbody>
-    </table>
+    *Tidak ada request body.*
   </TabItem>
   <TabItem value="contoh" label="Contoh" default>
     ```bash
-    curl https://api.bayar.digital/gateway/accounts \
+    curl -X GET [https://api.bayar.digital/gateway/accounts](https://api.bayar.digital/gateway/accounts) \
       -H "X-Api-Key: pk_..."
     ```
   </TabItem>
@@ -66,24 +59,24 @@ Sebelum membuat invoice, kamu perlu tahu rekening tujuan mana yang tersedia. Gun
 <Tabs>
   <TabItem value="sukses" label="Sukses" default>
     <table>
-    <thead>
-    <tr><th>Field</th><th>Tipe</th><th>Deskripsi</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`account_id`</td><td>uuid</td><td>**Gunakan ini** sebagai `account_id` saat create payment</td></tr>
-    <tr><td>`account_number`</td><td>string/null</td><td>Nomor rekening. QRIS: label/nama merchant</td></tr>
-    <tr><td>`account_name`</td><td>string/null</td><td>Nama pemilik rekening</td></tr>
-    <tr><td>`account_min_amount`</td><td>int64</td><td>Minimal nominal pembayaran</td></tr>
-    <tr><td>`account_max_amount`</td><td>int64/null</td><td>Maksimal nominal (null = tak terbatas)</td></tr>
-    <tr><td>`account_active`</td><td>bool</td><td>Status aktif</td></tr>
-    <tr><td>`account_quota`</td><td>int</td><td>Sisa hari kuota</td></tr>
-    <tr><td>`channel_id`</td><td>uuid</td><td>ID channel bank</td></tr>
-    <tr><td>`channel_type`</td><td>string</td><td>`TRANSFER` (transfer bank) atau `QRIS`</td></tr>
-    <tr><td>`channel_name`</td><td>string/null</td><td>Nama bank</td></tr>
-    <tr><td>`app_id`</td><td>uuid/null</td><td>ID aplikasi mobile banking</td></tr>
-    <tr><td>`app_name`</td><td>string/null</td><td>Nama aplikasi mobile banking</td></tr>
-    <tr><td>`app_package`</td><td>string/null</td><td>Package name Android</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Field</th><th>Tipe</th><th>Deskripsi</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`account_id`</td><td>uuid</td><td>**Penting:** Gunakan nilai ini sebagai `account_id` saat create payment</td></tr>
+        <tr><td>`account_number`</td><td>string</td><td>Nomor rekening atau QRIS NMID</td></tr>
+        <tr><td>`account_name`</td><td>string</td><td>Nama pemilik rekening</td></tr>
+        <tr><td>`account_min_amount`</td><td>int64</td><td>Minimal nominal pembayaran</td></tr>
+        <tr><td>`account_max_amount`</td><td>int64 / null</td><td>Maksimal nominal pembayaran (`null` = tak terbatas)</td></tr>
+        <tr><td>`account_active`</td><td>bool</td><td>Status keaktifan rekening</td></tr>
+        <tr><td>`account_quota`</td><td>int</td><td>Sisa kuota hari</td></tr>
+        <tr><td>`channel_id`</td><td>uuid</td><td>ID channel dari sistem perbankan</td></tr>
+        <tr><td>`channel_type`</td><td>string</td><td>`TRANSFER` (transfer bank) atau `QRIS`</td></tr>
+        <tr><td>`channel_name`</td><td>string</td><td>Nama bank atau institusi finansial</td></tr>
+        <tr><td>`app_id`</td><td>uuid</td><td>ID aplikasi mobile banking</td></tr>
+        <tr><td>`app_name`</td><td>string</td><td>Nama aplikasi mobile banking</td></tr>
+        <tr><td>`app_package`</td><td>string</td><td>*Package name* dari aplikasi mobile banking</td></tr>
+      </tbody>
     </table>
 
     **200 OK**
@@ -129,13 +122,13 @@ Sebelum membuat invoice, kamu perlu tahu rekening tujuan mana yang tersedia. Gun
   </TabItem>
   <TabItem value="gagal" label="Gagal">
     <table>
-    <thead>
-    <tr><th>Code</th><th>Status</th><th>Artinya</th></tr>
-    </thead>
-    <tbody>
-    <tr><td>`tenant_api_key_required`</td><td>403</td><td>API Key tidak valid</td></tr>
-    <tr><td>`internal_error`</td><td>500</td><td>Server error, coba lagi</td></tr>
-    </tbody>
+      <thead>
+        <tr><th>Code</th><th>Status</th><th>Artinya</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`tenant_api_key_required`</td><td>401</td><td>API Key tidak valid atau tidak disertakan</td></tr>
+        <tr><td>`internal_error`</td><td>500</td><td>Terjadi kesalahan pada server, silakan coba beberapa saat lagi</td></tr>
+      </tbody>
     </table>
 
     **401 Unauthorized**
@@ -147,6 +140,7 @@ Sebelum membuat invoice, kamu perlu tahu rekening tujuan mana yang tersedia. Gun
       "message": "tenant api key required"
     }
     ```
+
     **500 Internal Server Error**
 
     ```json
@@ -158,5 +152,3 @@ Sebelum membuat invoice, kamu perlu tahu rekening tujuan mana yang tersedia. Gun
     ```
   </TabItem>
 </Tabs>
-
-
