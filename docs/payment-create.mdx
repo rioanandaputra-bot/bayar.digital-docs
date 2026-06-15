@@ -96,7 +96,16 @@ Endpoint ini digunakan untuk membuat invoice pembayaran baru. Setelah Anda menda
         "payment_expired_at": "2026-10-11T12:00:00Z",
         "customer_name": "Budi Santoso",
         "customer_email": "budi@example.com",
-        "customer_phone": "081234567890"
+        "customer_phone": "081234567890",
+        "customer_orders": [
+          {
+            "sku": "SKU001",
+            "name": "Produk A",
+            "price": 50000,
+            "quantity": 1,
+            "subtotal": 50000
+          }
+        ]
       }'
     ```
   </TabItem>
@@ -135,6 +144,23 @@ Endpoint ini digunakan untuk membuat invoice pembayaran baru. Setelah Anda menda
         <tr><td>`channel_instructions`</td><td>array</td><td>Panduan atau instruksi pembayaran untuk customer</td></tr>
         <tr><td>`is_manual_match`</td><td>bool</td><td>Indikator apakah pembayaran dicocokkan secara manual</td></tr>
         <tr><td>`manual_matched_mutation_id`</td><td>uuid / null</td><td>ID mutasi apabila pencocokan dilakukan secara manual</td></tr>
+      </tbody>
+    </table>
+
+    **Detail `customer_orders` (Order Item):**
+
+    <table>
+      <thead>
+        <tr><th>Field</th><th>Tipe</th><th>Deskripsi</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>`sku`</td><td>string</td><td>SKU (*Stock Keeping Unit*) produk</td></tr>
+        <tr><td>`name`</td><td>string</td><td>Nama produk</td></tr>
+        <tr><td>`price`</td><td>int64</td><td>Harga satuan produk</td></tr>
+        <tr><td>`quantity`</td><td>int</td><td>Jumlah item yang dibeli</td></tr>
+        <tr><td>`subtotal`</td><td>int64</td><td>Total harga (`price × quantity`)</td></tr>
+        <tr><td>`product_url`</td><td>string / null</td><td>Tautan menuju halaman detail produk</td></tr>
+        <tr><td>`image_url`</td><td>string / null</td><td>Tautan gambar produk</td></tr>
       </tbody>
     </table>
 
@@ -187,7 +213,7 @@ Endpoint ini digunakan untuk membuat invoice pembayaran baru. Setelah Anda menda
   <TabItem value="gagal" label="Gagal">
     <table>
       <thead>
-        <tr><th>Code</th><th>Status</th><th>Artinya</th></tr>
+        <tr><th>Code</th><th>Status</th><th>Keterangan</th></tr>
       </thead>
       <tbody>
         <tr><td>`invalid request body`</td><td>400</td><td>Struktur atau format JSON tidak valid</td></tr>

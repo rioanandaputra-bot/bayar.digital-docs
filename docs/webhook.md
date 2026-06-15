@@ -6,7 +6,7 @@ sidebar_position: 12
 
 Bayar Digital akan mengirimkan *request HTTP POST* ke server Anda setiap kali terjadi perubahan status pembayaran.
 
-Webhook merupakan metode utama untuk mendapatkan notifikasi secara *real-time*. Metode ini jauh lebih cepat, efisien, dan andal dibandingkan dengan melakukan pengecekan status ( *polling* ) secara manual.
+Webhook merupakan metode utama untuk mendapatkan notifikasi secara *real-time*. Metode ini jauh lebih cepat, efisien, dan andal dibandingkan dengan melakukan pengecekan status (*polling*) secara manual.
 
 ---
 

@@ -58,7 +58,7 @@ Gunakan fitur ini sebagai langkah antisipasi apabila pelanggan telah melakukan t
   </TabItem>
   <TabItem value="contoh" label="Contoh" default>
     ```bash
-    curl -X POST [https://api.bayar.digital/gateway/payments/INV-2026-0001/match](https://api.bayar.digital/gateway/payments/INV-2026-0001/match) \
+    curl -X POST https://api.bayar.digital/gateway/payments/INV-2026-0001/match \
       -H "X-Api-Key: pk_..." \
       -H "X-Totp-Code: 123456" \
       -H "Content-Type: application/json" \

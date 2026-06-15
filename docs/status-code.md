@@ -4,7 +4,7 @@ sidebar_position: 13
 
 # Status & Error Code
 
-Referensi lengkap mengenai status transaksi, *webhook*, serta kode respons yang digunakan oleh API Bayar Digital.
+Referensi lengkap mengenai status transaksi, *webhook*, serta kode response yang digunakan oleh API Bayar Digital.
 
 ## HTTP Status
 

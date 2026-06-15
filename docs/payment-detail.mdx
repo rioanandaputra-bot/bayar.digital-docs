@@ -59,7 +59,7 @@ Silakan lihat halaman [Status & Error Code](./status-code) untuk melihat daftar 
   </TabItem>
   <TabItem value="contoh" label="Contoh" default>
 ```bash
-    curl [https://api.bayar.digital/gateway/payments/INV-2026-0001](https://api.bayar.digital/gateway/payments/INV-2026-0001) \
+    curl https://api.bayar.digital/gateway/payments/INV-2026-0001 \
       -H "X-Api-Key: pk_..."
     ```
   </TabItem>
@@ -116,9 +116,9 @@ Silakan lihat halaman [Status & Error Code](./status-code) untuk melihat daftar 
         "payment_status": "PAID",
         "payment_expired_at": "2026-10-11T12:00:00Z",
         "payment_updated_at": "2026-06-11T10:05:00Z",
-        "payment_webhook_url": "[https://yourserver.com/webhooks/bayar](https://yourserver.com/webhooks/bayar)",
-        "payment_checkout_url": "[https://bayar.digital/checkout/660e8400-e29b-41d4-a716-446655440010](https://bayar.digital/checkout/660e8400-e29b-41d4-a716-446655440010)",
-        "payment_return_url": "[https://yourserver.com/orders/INV-2026-0001](https://yourserver.com/orders/INV-2026-0001)",
+        "payment_webhook_url": "https://yourserver.com/webhooks/bayar",
+        "payment_checkout_url": "https://bayar.digital/checkout/660e8400-e29b-41d4-a716-446655440010",
+        "payment_return_url": "https://yourserver.com/orders/INV-2026-0001",
         "customer_name": "Budi Santoso",
         "customer_email": "budi@example.com",
         "customer_phone": "081234567890",
