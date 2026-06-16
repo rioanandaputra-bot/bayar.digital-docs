@@ -3,6 +3,7 @@
     "name": "bayar.digital Documentation",
     "version": "1.0.0"
   },
+  "description": "Bayar Digital Payment Gateway API documentation. Serves 13 markdown documentation pages via content negotiation, llms.txt, llms-full.txt, auth.md, and .well-known/ agent resources.",
   "endpoint": "https://docs.bayar.digital",
   "capabilities": {
     "tools": false,

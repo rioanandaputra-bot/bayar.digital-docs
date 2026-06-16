@@ -1,0 +1,2007 @@
+# Bayar Digital — Dokumentasi Developer (Full)
+
+> Payment gateway semua bank & QRIS untuk merchant Indonesia. Full documentation for AI agents.
+
+---
+
+
+# Overview
+
+
+
+Dokumentasi integrasi **Payment Gateway Bayar Digital** untuk developer Tenant.
+
+Dengan API ini, sistem kamu bisa:
+- Membuat invoice pembayaran untuk customer
+- Mendapatkan notifikasi real-time via webhook saat customer bayar
+- Mengecek status pembayaran
+- Membatalkan invoice
+
+
+## Cara Kerja
+
+```mermaid
+sequenceDiagram
+    participant S as Server Kamu
+    participant API as Bayar Digital API
+    participant W as Android Worker
+    participant C as Customer
+
+    S->>API: 1. GET /gateway/accounts
+    API-->>S: Daftar payment account
+    S->>API: 2. POST /gateway/payments
+    API-->>S: Payment detail + checkout_url
+    S->>C: 3. Tampilkan instruksi bayar
+    C->>C: 4. Transfer / QRIS sesuai nominal
+    W->>API: 5. Deteksi pembayaran masuk
+    API->>S: 6. Webhook POST → status PAID
+```
+
+**Singkatnya:**
+
+1. **Ambil akun** → `GET /gateway/accounts` untuk lihat rekening tujuan
+2. **Buat invoice** → `POST /gateway/payments`, sistem generate nominal unik
+3. **Customer bayar** → Tampilkan instruksi via `checkout_url` atau UI kamu
+4. **Deteksi otomatis** → Android Worker di perangkatmu mendeteksi transfer masuk
+5. **Notifikasi** → Kamu terima webhook `PAID`, update status order
+
+
+## Yang Perlu Kamu Siapkan
+
+| Komponen | Fungsi |
+|----------|--------|
+| Backend server | Simpan API Key, panggil Gateway API |
+| Database order | Simpan `payment_code`, `payment_total`, `status` |
+| Webhook endpoint | Terima notifikasi perubahan status |
+| Android device khusus | Install Worker untuk deteksi otomatis |
+| Cron job (opsional) | Rekonsiliasi berkala sebagai fallback |
+
+
+## Alur Dokumen
+
+Baca dokumentasi sesuai urutan berikut:
+
+| # | Topik | Deskripsi |
+|---|-------|-----------|
+| 1 | [Persiapan](./persiapan) | Setup API Key, base URL, rate limit |
+| 2 | [Android Worker](./android-worker) | Install aplikasi deteksi pembayaran |
+| 3 | [Payment Account](./payment-account) | Lihat daftar rekening tujuan |
+| 4 | [Payment Create](./payment-create) | Buat invoice pembayaran |
+| 5 | [Checkout](./checkout) | Halaman bayar untuk customer |
+| 6 | [Payment Get](./payment-get) | Cek status pembayaran |
+| 7 | [Payment Cancel](./payment-cancel) | Batalkan invoice |
+| 8 | [Payment Match](./payment-match) | Cocokkan pembayaran manual |
+| 9 | [Payment Mutations](./payment-mutations) | Lihat mutasi terdeteksi |
+| 10 | [Webhook](./webhook) | Setup notifikasi real-time |
+| 11 | [Status & Error Code](./status-code) | Referensi kode error |
+
+
+## Daftar Endpoint
+
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| `GET` | `/gateway/accounts` | Daftar rekening aktif |
+| `POST` | `/gateway/payments` | Buat invoice baru |
+| `GET` | `/gateway/payments` | Daftar invoice |
+| `GET` | `/gateway/payments/:code` | Detail invoice |
+| `DELETE` | `/gateway/payments/:code` | Batalkan invoice |
+| `POST` | `/gateway/payments/:code/match` | Cocokkan manual (butuh 2FA) |
+| `GET` | `/gateway/channels/:id/instructions` | Instruksi pembayaran |
+| `GET` | `/gateway/mutations` | Mutasi bank terdeteksi |
+
+---
+
+
+# Persiapan
+
+
+
+Setup awal yang harus dilakukan sebelum bisa menggunakan Payment Gateway.
+
+
+## Prasyarat
+
+| Langkah | Detail |
+|---------|--------|
+| 1. Daftar akun | Registrasi di [dashboard Bayar Digital](https://bayar.digital) |
+| 2. Buat Merchant | Buat entitas bisnis → dapatkan **API Key** (`pk_...`) |
+| 3. Setup Rekening | Tambah rekening bank atau QRIS di dashboard |
+| 4. Setup Android Worker | Instal aplikasi Worker di HP khusus ([panduan](./android-worker)) |
+| 5. Siapkan endpoint webhook | Buat endpoint di server kamu untuk terima notifikasi |
+
+
+## Base URL
+
+```
+https://api.bayar.digital
+```
+
+Semua endpoint Gateway menggunakan prefix `/gateway/`.
+
+
+## Autentikasi
+
+Kirim API Key via header `X-Api-Key` di setiap request.
+
+```
+X-Api-Key: pk_550e8400e29b41d4a716446655440000...
+```
+
+API Key didapatkan dari Dashboard → menu Merchant → **Generate API Key**.
+
+:::warning
+Simpan API Key di **environment variable** server backend kamu. Jangan pernah hardcode di frontend atau repository publik.
+:::
+
+```bash
+# .env
+BAYAR_DIGITAL_API_KEY=pk_550e8400e29b41d4a716446655440000...
+BAYAR_DIGITAL_BASE_URL=https://api.bayar.digital
+```
+
+Lihat [Status & Error Code](./status-code) untuk daftar lengkap error auth dan kode lainnya.
+
+
+## Rate Limit
+
+| Grup | Limit per Merchant |
+|------|-------------------|
+| **Read** (`GET` endpoints) | 3.000 request/menit |
+| **Write** (`POST`, `DELETE`) | 600 request/menit |
+
+Jika terlampaui:
+
+```json
+{
+  "success": false,
+  "code": "rate_limited",
+  "message": "rate limited"
+}
+```
+
+Response header `X-RateLimit-Reset` memberi tahu berapa detik hingga limit reset.
+
+
+## Response Format
+
+Semua response API mengikuti format berikut.
+
+### Success (200)
+
+```json
+{
+  "success": true,
+  "message": "ok",
+  "data": { ... }
+}
+```
+
+### Created (201)
+
+```json
+{
+  "success": true,
+  "message": "created",
+  "data": { ... }
+}
+```
+
+### Paginated
+
+```json
+{
+  "success": true,
+  "message": "ok",
+  "data": [ ... ],
+  "pagination": {
+    "total": 100,
+    "count": 20,
+    "per_page": 20,
+    "current_page": 1,
+    "total_pages": 5
+  }
+}
+```
+
+### Error
+
+```json
+{
+  "success": false,
+  "code": "ERROR_CODE",
+  "message": "Pesan error"
+}
+```
+
+### Validation Error
+
+```json
+{
+  "success": false,
+  "code": "validation_error",
+  "message": "validation error",
+  "errors": {
+    "field_name": "deskripsi error"
+  }
+}
+```
+
+---
+
+
+# Android Worker
+
+
+
+Aplikasi Android yang dipasang di perangkat khusus milik Anda untuk **mendeteksi pembayaran masuk** secara otomatis. Tanpa Worker aktif, sistem tidak bisa mendeteksi transfer customer secara otomatis.
+
+:::info
+**Konteks:** Setelah [Persiapan](./persiapan) selesai, langkah selanjutnya adalah setup Android Worker sebagai "mata" sistem untuk mendeteksi transfer masuk.
+:::
+
+
+## Cara Kerja
+
+Worker dipasang di HP khusus yang **juga terinstall aplikasi mobile banking** (BCA Mobile, Livin' Mandiri, dll).
+
+Ketika ada notifikasi transfer masuk, Worker langsung:
+1. Membaca notifikasi dari aplikasi bank
+2. Mengekstrak nominal dan pengirim
+3. Mengirim data ke server Bayar Digital
+4. Sistem mencocokkan dengan invoice yang PENDING
+
+
+## Persiapan
+
+| Item | Keterangan |
+|------|------------|
+| Perangkat Android khusus | **Jangan pakai HP pribadi.** Sediakan device khusus yang selalu online |
+| Koneksi internet stabil | Worker perlu kirim data ke server secara real-time |
+| Aplikasi banking terpasang | Install aplikasi bank di perangkat yang **sama** |
+| API Key | Siapkan API Key Merchant dari Dashboard |
+
+:::warning
+Worker harus berjalan 24 jam. Gunakan perangkat yang selalu terhubung listrik dan internet.
+:::
+
+
+## Instalasi
+
+### 1. Download APK
+
+Download APK Worker dari Dashboard Bayar Digital atau link berikut:
+
+[Download Worker APK](https://bayar.digital/downloads/app-worker-latest.apk)
+
+### 2. Install APK
+
+Kirim file APK ke perangkat Android, lalu buka dan install.
+
+### 3. Masukkan API Key
+
+Buka aplikasi Worker, masukkan **API Key** (`pk_...`) yang didapat dari Dashboard.
+
+### 4. Registrasi Perangkat
+
+Setelah masukkan API Key, aplikasi akan otomatis mendaftarkan perangkat ke server. Status perangkat menjadi **PENDING**.
+
+### 5. Approve Device di Dashboard
+
+Login ke Dashboard Bayar Digital → menu **Pairing Device** → klik **Setujui** pada perangkat yang baru mendaftar.
+
+### 6. Berikan Izin
+
+Aplikasi akan meminta 3 izin. Semua **wajib** diberikan agar Worker berfungsi:
+
+| Izin | Cara Memberikan |
+|------|-----------------|
+| **Notifikasi** | Pop-up akan muncul → tap **Izinkan** |
+| **Akses Notifikasi** | Masuk ke *Settings → Notification Access* → aktifkan **bayar.digital Worker** |
+| **Optimasi Baterai** | Pop-up akan muncul → tap **Izinkan** / **Nonaktifkan** |
+
+### 7. Selesai
+
+Worker mulai berjalan. Status di Dashboard berubah menjadi **Aktif**. Aplikasi akan menampilkan notifikasi *"Listening for bank notifications"* sebagai tanda sedang berjalan.
+
+
+## Troubleshooting
+
+### Payment tetap PENDING padahal customer sudah transfer
+
+| Kemungkinan | Solusi |
+|-------------|--------|
+| HP mati / offline | Cek koneksi internet perangkat |
+| Baterai hemat daya aktif | Nonaktifkan optimasi baterai di settings |
+| Izin akses notifikasi hilang | Cek Settings → Notification Access |
+| Worker tidak terlihat | Cek notifikasi foreground "Listening for bank notifications" |
+| Aplikasi bank tidak terinstall | Install aplikasi bank di device yang **sama** |
+
+### Cara Verifikasi
+
+1. Cek status device di Dashboard → **Pairing Device** → pastikan **Aktif**
+2. Cek status payment via API: `GET /gateway/payments/{payment_code}`
+3. Cek apakah mutasi masuk: `GET /gateway/mutations?only_unmatched=true`
+
+Jika masalah berlanjut, hubungi tim support Bayar Digital.
+
+
+**Lanjutan:** Setelah Worker aktif, lihat [Payment Account](./payment-account) untuk melihat rekening tujuan yang tersedia.
+
+---
+
+
+# Payment Account
+
+
+
+Melihat daftar rekening aktif yang tersedia untuk digunakan sebagai tujuan pembayaran.
+
+:::info
+Sebelum membuat invoice, kamu perlu tahu rekening tujuan mana yang tersedia. Gunakan `account_id` dari response ini saat [Payment Create](./payment-create).
+:::
+
+<Tabs>
+  <TabItem value="request" label="Request" default>
+    <Tabs>
+      <TabItem value="endpoint" label="Endpoint" default>
+        | Method | URL |
+        |--------|-----|
+        | `GET` | `/gateway/accounts` |
+      </TabItem>
+      <TabItem value="param" label="Param">
+        Tidak ada parameter.
+      </TabItem>
+      <TabItem value="header" label="Header">
+        | Header | Wajib | Deskripsi |
+        |--------|-------|-----------|
+        | `X-Api-Key` | Ya | API Key merchant |
+      </TabItem>
+      <TabItem value="body" label="Body">
+        Tidak ada request body (GET).
+      </TabItem>
+      <TabItem value="contoh" label="Contoh">
+        ```bash
+        curl https://api.bayar.digital/gateway/accounts \
+          -H "X-Api-Key: pk_..."
+        ```
+      </TabItem>
+    </Tabs>
+  </TabItem>
+  <TabItem value="response" label="Response">
+    <Tabs>
+      <TabItem value="sukses" label="Sukses" default>
+        ```json
+        {
+          "success": true,
+          "message": "ok",
+          "data": [
+            {
+              "account_id": "550e8400-e29b-41d4-a716-446655440000",
+              "account_number": "1234567890",
+              "account_name": "PT Merchant Contoh",
+              "account_min_amount": 10000,
+              "account_max_amount": 10000000,
+              "account_active": true,
+              "account_quota": 30,
+              "channel_id": "660e8400-e29b-41d4-a716-446655440001",
+              "channel_type": "TRANSFER",
+              "channel_name": "Bank Central Asia",
+              "app_id": "990e8400-e29b-41d4-a716-446655440002",
+              "app_name": "BCA Mobile",
+              "app_package": "com.bca"
+            },
+            {
+              "account_id": "550e8400-e29b-41d4-a716-446655440003",
+              "account_number": "QRIS-001",
+              "account_name": "PT Merchant Contoh",
+              "account_min_amount": 1000,
+              "account_max_amount": 5000000,
+              "account_active": true,
+              "account_quota": 30,
+              "channel_id": "660e8400-e29b-41d4-a716-446655440004",
+              "channel_type": "QRIS",
+              "channel_name": "QRIS",
+              "app_id": null,
+              "app_name": null,
+              "app_package": null
+            }
+          ]
+        }
+        ```
+      </TabItem>
+      <TabItem value="gagal" label="Gagal">
+        ```json
+        {
+          "success": false,
+          "code": "tenant_api_key_required",
+          "message": "tenant api key required"
+        }
+        ```
+        ```json
+        {
+          "success": false,
+          "code": "internal_error",
+          "message": "internal server error"
+        }
+        ```
+      </TabItem>
+    </Tabs>
+  </TabItem>
+</Tabs>
+
+## Response Fields
+
+| Field | Tipe | Deskripsi |
+|-------|------|-----------|
+| `account_id` | uuid | **Gunakan ini** sebagai `account_id` saat create payment |
+| `account_number` | string/null | Nomor rekening. QRIS: label/nama merchant |
+| `account_name` | string/null | Nama pemilik rekening |
+| `account_min_amount` | int64 | Minimal nominal pembayaran |
+| `account_max_amount` | int64/null | Maksimal nominal (null = tak terbatas) |
+| `account_active` | bool | Status aktif |
+| `account_quota` | int | Sisa hari kuota |
+| `channel_id` | uuid | ID channel bank |
+| `channel_type` | string | `TRANSFER` (transfer bank) atau `QRIS` |
+| `channel_name` | string/null | Nama bank |
+| `app_id` | uuid/null | ID aplikasi mobile banking |
+| `app_name` | string/null | Nama aplikasi mobile banking |
+| `app_package` | string/null | Package name Android |
+
+## Error
+
+| Code | Status | Artinya |
+|------|--------|---------|
+| `tenant_api_key_required` | 403 | API Key tidak valid |
+| `internal_error` | 500 | Server error, coba lagi |
+
+## Cara Memilih Account
+
+- **Transfer bank** → pilih `channel_type: "TRANSFER"`
+- **QRIS** → pilih `channel_type: "QRIS"`
+
+Simpan `account_id` sebagai konfigurasi di sistem kamu, lalu kirim sebagai `account_id` saat create payment.
+
+
+**Lanjutan:** Sudah tahu rekening tujuan? Lanjut ke [Payment Create](./payment-create) untuk membuat invoice.
+
+---
+
+
+# Payment Create
+
+
+
+Membuat invoice pembayaran baru. Sistem otomatis menambahkan **nominal unik** (1-999) agar transfer customer bisa dideteksi.
+
+:::info
+Setelah mendapat `account_id` dari [Payment Account](./payment-account), langkah ini membuat invoice yang akan dibayar customer.
+
+`payment_code` bersifat **idempotency key** — request dengan kode yang sama akan ditolak (409), mencegah duplikasi invoice.
+:::
+
+Sistem generate angka acak 1-999 sebagai nominal unik. Customer WAJIB membayar sebesar `payment_total` (`payment_amount + payment_unique`), bukan `payment_amount`.
+
+```
+payment_total = 50.000 + 123 = 50.123
+```
+
+Tampilkan di UI:
+```
+Total yang harus dibayar: Rp 50.123
+(Rp 50.000 + kode unik Rp 123)
+```
+
+<Tabs>
+  <TabItem value="request" label="Request" default>
+    <Tabs>
+      <TabItem value="endpoint" label="Endpoint" default>
+        | Method | URL |
+        |--------|-----|
+        | `POST` | `/gateway/payments` |
+      </TabItem>
+      <TabItem value="param" label="Param">
+        Tidak ada parameter URL.
+      </TabItem>
+      <TabItem value="header" label="Header">
+        | Header | Wajib | Deskripsi |
+        |--------|-------|-----------|
+        | `X-Api-Key` | Ya | API Key merchant |
+        | `Content-Type` | Ya | `application/json` |
+      </TabItem>
+      <TabItem value="body" label="Body">
+        | Field | Tipe | Wajib | Deskripsi |
+        |-------|------|-------|-----------|
+        | `account_id` | uuid | Ya | ID akun tujuan (dari `GET /gateway/accounts`) |
+        | `payment_code` | string | Ya | Idempotency key. Kode unik dari sistem kamu |
+        | `payment_amount` | int64 | Ya | Nominal invoice sebelum nominal unik |
+        | `payment_expired_at` | string | Ya | Batas waktu (ISO 8601, harus di masa depan) |
+        | `customer_name` | string | Ya | Nama customer |
+        | `customer_email` | string | Tidak | Email (maks 255). Minimal email atau phone |
+        | `customer_phone` | string | Tidak | Telepon (maks 50). Minimal email atau phone |
+        | `payment_webhook_url` | string | Tidak | Webhook endpoint khusus invoice ini |
+        | `payment_return_url` | string | Tidak | Redirect setelah customer bayar |
+        | `customer_orders` | array | Tidak | Daftar item pesanan |
+
+        **Order Item:**
+
+        | Field | Tipe | Wajib | Deskripsi |
+        |-------|------|-------|-----------|
+        | `sku` | string | Tidak | SKU produk |
+        | `name` | string | Ya | Nama produk |
+        | `price` | int64 | Ya | Harga satuan |
+        | `quantity` | int | Ya | Jumlah |
+        | `subtotal` | int64 | Ya | Akan di-override sistem = `price × quantity` |
+        | `product_url` | string | Tidak | URL halaman produk |
+        | `image_url` | string | Tidak | URL gambar produk |
+
+        :::info
+        Jika `customer_orders` diisi, total seluruh `subtotal` harus sama dengan `payment_amount`.
+        :::
+      </TabItem>
+      <TabItem value="contoh" label="Contoh">
+        ```bash
+        curl -X POST https://api.bayar.digital/gateway/payments \
+          -H "X-Api-Key: pk_..." \
+          -H "Content-Type: application/json" \
+          -d '{
+            "account_id": "550e8400-e29b-41d4-a716-446655440000",
+            "payment_code": "INV-2026-0001",
+            "payment_amount": 50000,
+            "payment_expired_at": "2026-10-11T12:00:00Z",
+            "customer_name": "Budi Santoso",
+            "customer_email": "budi@example.com",
+            "customer_phone": "081234567890"
+          }'
+        ```
+
+        ```json
+        {
+          "account_id": "550e8400-e29b-41d4-a716-446655440000",
+          "payment_code": "INV-2026-0001",
+          "payment_amount": 50000,
+          "payment_expired_at": "2026-10-11T12:00:00Z",
+          "customer_name": "Budi Santoso",
+          "customer_email": "budi@example.com",
+          "customer_phone": "081234567890",
+          "payment_webhook_url": "https://yourserver.com/webhooks/bayar",
+          "payment_return_url": "https://yourserver.com/orders/INV-2026-0001",
+          "customer_orders": [
+            {
+              "sku": "SKU001",
+              "name": "Produk A",
+              "price": 50000,
+              "quantity": 1,
+              "subtotal": 50000,
+              "product_url": "https://yourserver.com/products/produk-a",
+              "image_url": "https://yourserver.com/images/produk-a.jpg"
+            }
+          ]
+        }
+        ```
+      </TabItem>
+    </Tabs>
+  </TabItem>
+  <TabItem value="response" label="Response">
+    <Tabs>
+      <TabItem value="sukses" label="Sukses" default>
+        **201 Created**
+
+        ```json
+        {
+          "success": true,
+          "message": "created",
+          "data": {
+            "payment_id": "660e8400-e29b-41d4-a716-446655440010",
+            "payment_code": "INV-2026-0001",
+            "payment_amount": 50000,
+            "payment_unique": 123,
+            "payment_total": 50123,
+            "payment_status": "PENDING",
+            "payment_expired_at": "2026-10-11T12:00:00Z",
+            "payment_updated_at": "2026-06-11T10:00:00Z",
+            "payment_webhook_url": "https://yourserver.com/webhooks/bayar",
+            "payment_checkout_url": "https://bayar.digital/checkout/660e8400-e29b-41d4-a716-446655440010",
+            "payment_return_url": "https://yourserver.com/orders/INV-2026-0001",
+            "customer_name": "Budi Santoso",
+            "customer_email": "budi@example.com",
+            "customer_phone": "081234567890",
+            "customer_orders": [
+              {
+                "sku": "SKU001",
+                "name": "Produk A",
+                "price": 50000,
+                "quantity": 1,
+                "subtotal": 50000,
+                "product_url": "https://yourserver.com/products/produk-a",
+                "image_url": "https://yourserver.com/images/produk-a.jpg"
+              }
+            ],
+            "account_id": "550e8400-e29b-41d4-a716-446655440000",
+            "account_number": "1234567890",
+            "account_name": "PT Merchant Contoh",
+            "channel_id": "660e8400-e29b-41d4-a716-446655440001",
+            "channel_name": "Bank Central Asia",
+            "channel_type": "TRANSFER",
+            "channel_instructions": [],
+            "is_manual_match": false,
+            "manual_matched_mutation_id": null
+          }
+        }
+        ```
+      </TabItem>
+      <TabItem value="gagal" label="Gagal">
+        **Validation Error (400)**
+        ```json
+        {
+          "success": false,
+          "code": "validation_error",
+          "message": "validation error",
+          "errors": {
+            "customer_name": "customer name is required"
+          }
+        }
+        ```
+
+        **Conflict (409)**
+        ```json
+        {
+          "success": false,
+          "code": "payment_code_conflict",
+          "message": "payment code conflict"
+        }
+        ```
+
+        **Conflict (409)**
+        ```json
+        {
+          "success": false,
+          "code": "unique_amount_conflict",
+          "message": "unique amount conflict"
+        }
+        ```
+      </TabItem>
+    </Tabs>
+  </TabItem>
+</Tabs>
+
+## Response Fields
+
+| Field | Tipe | Deskripsi |
+|-------|------|-----------|
+| `payment_id` | uuid | ID unik invoice |
+| `payment_code` | string | Kode invoice dari sistem kamu |
+| `payment_amount` | int64 | Nominal asli (tanpa nominal unik) |
+| `payment_unique` | int64 | Nominal unik (1-999) |
+| `payment_total` | int64 | **Total yang harus dibayar** = amount + unique |
+| `payment_status` | string | `PENDING` |
+| `payment_expired_at` | datetime | Batas waktu pembayaran |
+| `payment_updated_at` | datetime | Waktu update terakhir |
+| `payment_webhook_url` | string/null | Webhook endpoint invoice ini |
+| `payment_checkout_url` | string | URL halaman checkout publik |
+| `payment_return_url` | string/null | Redirect URL |
+| `customer_name` | string | Nama customer |
+| `customer_email` | string/null | Email customer |
+| `customer_phone` | string/null | Telepon customer |
+| `customer_orders` | array | Item pesanan |
+| `account_id` | uuid | ID akun tujuan |
+| `account_number` | string | Nomor rekening tujuan |
+| `account_name` | string | Nama pemilik rekening |
+| `channel_id` | uuid | ID channel bank |
+| `channel_name` | string | Nama bank |
+| `channel_type` | string | `TRANSFER` / `QRIS` |
+| `channel_instructions` | array | Instruksi pembayaran |
+| `is_manual_match` | bool | Dicocokkan manual? |
+| `manual_matched_mutation_id` | uuid/null | ID mutasi terkait |
+
+## Simpan di Sistem Kamu
+
+Setelah create payment, simpan field berikut:
+
+| Field | Gunakan Untuk |
+|-------|---------------|
+| `payment_id` | Referensi unik invoice |
+| `payment_code` | Kode invoice kamu |
+| `payment_total` | Nominal yang harus dibayar customer |
+| `payment_status` | Status awal: `PENDING` |
+| `payment_checkout_url` | Redirect customer (opsional) |
+| `payment_webhook_url` | Webhook yang akan dikirimi notifikasi |
+| `account_number` | Nomor rekening tujuan |
+| `channel_instructions` | Instruksi pembayaran |
+
+## Error
+
+| Code | Status | Artinya |
+|------|--------|---------|
+| `invalid request body` | 400 | Format JSON salah |
+| `validation_error` | 400 | Field tidak valid (cek `errors`) |
+| `invalid_expired_at` | 400 | Format `payment_expired_at` salah |
+| `account_not_owned` | 403 | `account_id` bukan milik Anda |
+| `no_active_quota` | 403 | Kuota akun habis |
+| `tenant_api_key_required` | 403 | API Key tidak valid |
+| `unique_amount_conflict` | 409 | Gagal generate nominal unik, coba lagi |
+| `payment_code_conflict` | 409 | `payment_code` sudah dipakai (idempotency) |
+| `internal_error` | 500 | Server error, coba lagi |
+
+
+**Lanjutan:** Invoice sudah dibuat! Arahkan customer ke [Checkout](./checkout) atau tampilkan detail pembayaran di UI kamu.
+
+---
+
+
+# Checkout
+
+
+
+Halaman publik Bayar Digital untuk customer melakukan pembayaran. Customer **tidak perlu login** atau punya akun.
+
+:::info
+Setelah invoice dibuat, kamu bisa redirect customer ke halaman checkout ini. `payment_checkout_url` diberikan saat create payment sebagai URL absolut penuh.
+
+**Alternatif:** Kalau tidak ingin redirect, kamu bisa tampilkan detail pembayaran (nomor rekening, nominal total, instruksi) di UI kamu sendiri. Ambil data dari response `POST /gateway/payments` atau `GET /gateway/payments/{code}`, lalu pantau status via [Webhook](./webhook).
+:::
+
+## Alur Redirect
+
+```mermaid
+sequenceDiagram
+    participant S as Server Kamu
+    participant B as Bayar Digital
+    participant C as Customer
+
+    S->>B: POST /gateway/payments
+    B-->>S: checkout_url
+    S->>C: Redirect ke checkout_url
+    C->>B: Buka halaman checkout
+    C->>C: Transfer / QRIS
+    B->>S: Webhook: PAID
+    B-->>C: Redirect ke return_url
+```
+
+### Yang Customer Lihat
+
+| Status | Tampilan |
+|--------|----------|
+| `PENDING` | Instruksi pembayaran, nominal total, batas waktu mundur |
+| `PAID` | Konfirmasi sukses + tombol kembali ke merchant |
+| `EXPIRED` / `CANCELLED` | Halaman tidak tersedia |
+
+**Transfer bank:** menampilkan nomor rekening dan nominal `payment_total`.
+**QRIS:** menampilkan QR Code dinamis dengan nominal spesifik.
+
+### return_url
+
+- Customer otomatis redirect ke `return_url` setelah status `PAID`
+- Parameter `?payment_code={payment_code}` otomatis ditambahkan
+- Hanya HTTPS yang diizinkan
+
+:::warning
+**Jangan** jadikan redirect sebagai sumber kebenaran. Gunakan **webhook** untuk memastikan status payment.
+:::
+
+
+## Public API
+
+Halaman checkout menggunakan endpoint publik (tanpa autentikasi).
+
+<Tabs>
+  <TabItem value="request" label="Request" default>
+    <Tabs>
+      <TabItem value="endpoint" label="Endpoint" default>
+        | Method | URL |
+        |--------|-----|
+        | `GET` | `/checkout/{payment_id}` |
+      </TabItem>
+      <TabItem value="param" label="Param">
+        | Parameter | Tipe | Wajib | Deskripsi |
+        |-----------|------|-------|-----------|
+        | `payment_id` | uuid | Ya | ID invoice (dari `payment_checkout_url`) |
+      </TabItem>
+      <TabItem value="header" label="Header">
+        Endpoint publik — tidak perlu header.
+      </TabItem>
+      <TabItem value="body" label="Body">
+        Tidak ada request body (GET).
+      </TabItem>
+      <TabItem value="contoh" label="Contoh">
+        ```bash
+        curl https://api.bayar.digital/checkout/660e8400-e29b-41d4-a716-446655440010
+        ```
+      </TabItem>
+    </Tabs>
+  </TabItem>
+  <TabItem value="response" label="Response">
+    <Tabs>
+      <TabItem value="sukses" label="Sukses" default>
+        **Transfer Bank:**
+        ```json
+        {
+          "success": true,
+          "message": "ok",
+          "data": {
+            "payment_code": "INV-2026-0001",
+            "amount_original": 50000,
+            "amount_unique": 123,
+            "amount_total": 50123,
+            "status": "PENDING",
+            "expires_at": "2026-10-11T12:00:00Z",
+            "created_at": "2026-06-11T10:00:00Z",
+            "customer_name": "Budi Santoso",
+            "customer_email": "budi@example.com",
+            "customer_phone": "081234567890",
+            "return_url": "https://yourserver.com/orders/INV-2026-0001",
+            "redirect_url": "https://yourserver.com/orders/INV-2026-0001?payment_code=INV-2026-0001",
+            "order_items": "[{\"name\":\"Produk A\",\"price\":50000,\"quantity\":1,\"subtotal\":50000}]",
+            "account_number": "1234567890",
+            "account_name": "PT Merchant Contoh",
+            "bank_name": "BCA",
+            "bank_type": "TRANSFER",
+            "app_name": "BCA Mobile",
+            "instructions": "[]"
+          }
+        }
+        ```
+
+        **QRIS — Field Tambahan:**
+        | Field | Tipe | Deskripsi |
+        |-------|------|-----------|
+        | `qris_id` | string/null | NMID merchant |
+        | `qris_name` | string/null | Nama merchant |
+        | `qris_city` | string/null | Kota |
+        | `qris_payload` | string/null | QRIS content string (untuk generate QR Code) |
+
+        :::info
+        `qris_payload` bersifat **dinamis** dengan nominal spesifik. Static QR tidak pernah diekspos.
+        :::
+      </TabItem>
+      <TabItem value="gagal" label="Gagal">
+        ```json
+        {
+          "success": false,
+          "code": "not_found",
+          "message": "payment not found"
+        }
+        ```
+      </TabItem>
+    </Tabs>
+  </TabItem>
+</Tabs>
+
+## Response Fields
+
+| Field | Tipe | Deskripsi |
+|-------|------|-----------|
+| `payment_code` | string | Kode invoice |
+| `amount_original` | int64 | Nominal asli (tanpa nominal unik) |
+| `amount_unique` | int64 | Nominal unik |
+| `amount_total` | int64 | Total yang harus dibayar |
+| `status` | string | Status payment |
+| `expires_at` | datetime | Batas waktu pembayaran |
+| `created_at` | datetime | Waktu pembuatan |
+| `customer_name` | string | Nama customer |
+| `customer_email` | string/null | Email customer |
+| `customer_phone` | string/null | Telepon customer |
+| `return_url` | string/null | Redirect URL |
+| `redirect_url` | string/null | URL redirect dengan parameter `payment_code` |
+| `order_items` | string | Item pesanan (JSON string) |
+| `account_number` | string | Nomor rekening tujuan |
+| `account_name` | string | Nama pemilik rekening |
+| `bank_name` | string | Nama bank |
+| `bank_type` | string | `TRANSFER` |
+| `app_name` | string | Nama aplikasi mobile banking |
+| `instructions` | string | Instruksi pembayaran (JSON string) |
+
+
+**Lanjutan:** Pantau status pembayaran via [Payment Get](./payment-get) atau setup [Webhook](./webhook) untuk notifikasi otomatis.
+
+---
+
+
+# Payment Get
+
+
+
+Mengecek status pembayaran atau rekonsiliasi order.
+
+:::info
+Gunakan endpoint ini untuk mengecek status invoice kapan saja. Untuk update status real-time, setup [Webhook](./webhook).
+
+Lihat [Status & Error Code](./status-code) untuk daftar lengkap status payment.
+:::
+
+
+## Get by Payment Code
+
+Ambil detail satu invoice berdasarkan `payment_code` dari sistem kamu.
+
+<Tabs>
+  <TabItem value="request" label="Request" default>
+    <Tabs>
+      <TabItem value="endpoint" label="Endpoint" default>
+        | Method | URL |
+        |--------|-----|
+        | `GET` | `/gateway/payments/{payment_code}` |
+      </TabItem>
+      <TabItem value="param" label="Param">
+        | Parameter | Tipe | Wajib | Deskripsi |
+        |-----------|------|-------|-----------|
+        | `payment_code` | string | Ya | Kode invoice dari sistem kamu |
+      </TabItem>
+      <TabItem value="header" label="Header">
+        | Header | Wajib | Deskripsi |
+        |--------|-------|-----------|
+        | `X-Api-Key` | Ya | API Key merchant |
+      </TabItem>
+      <TabItem value="body" label="Body">
+        Tidak ada request body (GET).
+      </TabItem>
+      <TabItem value="contoh" label="Contoh">
+        ```bash
+        curl https://api.bayar.digital/gateway/payments/INV-2026-0001 \
+          -H "X-Api-Key: pk_..."
+        ```
+      </TabItem>
+    </Tabs>
+  </TabItem>
+  <TabItem value="response" label="Response">
+    <Tabs>
+      <TabItem value="sukses" label="Sukses" default>
+        ```json
+        {
+          "success": true,
+          "message": "ok",
+          "data": {
+            "payment_id": "660e8400-e29b-41d4-a716-446655440010",
+            "payment_code": "INV-2026-0001",
+            "payment_amount": 50000,
+            "payment_unique": 123,
+            "payment_total": 50123,
+            "payment_status": "PAID",
+            "payment_expired_at": "2026-10-11T12:00:00Z",
+            "payment_updated_at": "2026-06-11T10:05:00Z",
+            "payment_webhook_url": "https://yourserver.com/webhooks/bayar",
+            "payment_checkout_url": "https://bayar.digital/checkout/660e8400-e29b-41d4-a716-446655440010",
+            "payment_return_url": "https://yourserver.com/orders/INV-2026-0001",
+            "customer_name": "Budi Santoso",
+            "customer_email": "budi@example.com",
+            "customer_phone": "081234567890",
+            "customer_orders": [
+              {
+                "name": "Produk A",
+                "price": 50000,
+                "quantity": 1,
+                "subtotal": 50000
+              }
+            ],
+            "account_id": "550e8400-e29b-41d4-a716-446655440000",
+            "account_number": "1234567890",
+            "account_name": "PT Merchant Contoh",
+            "channel_id": "660e8400-e29b-41d4-a716-446655440001",
+            "channel_name": "Bank Central Asia",
+            "channel_type": "TRANSFER",
+            "channel_instructions": [],
+            "is_manual_match": false,
+            "manual_matched_mutation_id": null
+          }
+        }
+        ```
+      </TabItem>
+      <TabItem value="gagal" label="Gagal">
+        ```json
+        {
+          "success": false,
+          "code": "not_found",
+          "message": "payment not found"
+        }
+        ```
+      </TabItem>
+    </Tabs>
+  </TabItem>
+</Tabs>
+
+### Response Fields
+
+| Field | Tipe | Deskripsi |
+|-------|------|-----------|
+| `payment_id` | uuid | ID unik invoice |
+| `payment_code` | string | Kode invoice dari sistem kamu |
+| `payment_amount` | int64 | Nominal asli (tanpa nominal unik) |
+| `payment_unique` | int64 | Nominal unik (1-999) |
+| `payment_total` | int64 | **Total yang harus dibayar** = amount + unique |
+| `payment_status` | string | `PENDING` / `PAID` / `EXPIRED` / `CANCELLED` |
+| `payment_expired_at` | datetime | Batas waktu pembayaran |
+| `payment_updated_at` | datetime | Waktu update terakhir |
+| `payment_webhook_url` | string/null | Webhook endpoint invoice ini |
+| `payment_checkout_url` | string | URL halaman checkout publik |
+| `payment_return_url` | string/null | Redirect URL |
+| `customer_name` | string/null | Nama customer |
+| `customer_email` | string/null | Email customer |
+| `customer_phone` | string/null | Telepon customer |
+| `customer_orders` | array/null | Item pesanan |
+| `account_id` | uuid | ID akun tujuan |
+| `account_number` | string/null | Nomor rekening / QRIS URL |
+| `account_name` | string/null | Nama pemilik rekening |
+| `channel_id` | uuid/null | ID channel |
+| `channel_name` | string/null | Nama bank |
+| `channel_type` | string/null | `TRANSFER` / `QRIS` |
+| `channel_instructions` | array | Instruksi pembayaran |
+| `is_manual_match` | bool | Dicocokkan manual? |
+| `manual_matched_mutation_id` | uuid/null | ID mutasi terkait (jika manual match) |
+
+### Error
+
+| Code | Status | Artinya |
+|------|--------|---------|
+| `tenant_api_key_required` | 403 | API Key tidak valid |
+| `not_found` | 404 | `payment_code` tidak ditemukan |
+| `internal_error` | 500 | Server error, coba lagi |
+
+
+## List Payments
+
+Ambil daftar invoice, diurutkan dari terbaru.
+
+<Tabs>
+  <TabItem value="request2" label="Request" default>
+    <Tabs>
+      <TabItem value="endpoint2" label="Endpoint" default>
+        | Method | URL |
+        |--------|-----|
+        | `GET` | `/gateway/payments` |
+      </TabItem>
+      <TabItem value="param2" label="Param">
+        | Parameter | Tipe | Default | Maks | Deskripsi |
+        |-----------|------|---------|------|-----------|
+        | `page` | integer | 1 | — | Halaman |
+        | `per_page` | integer | 20 | 100 | Data per halaman |
+      </TabItem>
+      <TabItem value="header2" label="Header">
+        | Header | Wajib | Deskripsi |
+        |--------|-------|-----------|
+        | `X-Api-Key` | Ya | API Key merchant |
+      </TabItem>
+      <TabItem value="body2" label="Body">
+        Tidak ada request body (GET).
+      </TabItem>
+      <TabItem value="contoh2" label="Contoh">
+        ```bash
+        curl "https://api.bayar.digital/gateway/payments?page=1&per_page=20" \
+          -H "X-Api-Key: pk_..."
+        ```
+      </TabItem>
+    </Tabs>
+  </TabItem>
+  <TabItem value="response2" label="Response">
+    <Tabs>
+      <TabItem value="sukses2" label="Sukses" default>
+        ```json
+        {
+          "success": true,
+          "message": "ok",
+          "data": [
+            {
+              "payment_id": "660e8400-e29b-41d4-a716-446655440010",
+              "payment_code": "INV-2026-0001",
+              "payment_amount": 50000,
+              "payment_unique": 123,
+              "payment_total": 50123,
+              "payment_status": "PAID",
+              "payment_expired_at": "2026-10-11T12:00:00Z",
+              "payment_updated_at": "2026-06-11T10:05:00Z",
+              "payment_webhook_url": "https://yourserver.com/webhooks/bayar",
+              "payment_checkout_url": "https://bayar.digital/checkout/660e8400-e29b-41d4-a716-446655440010",
+              "payment_return_url": "https://yourserver.com/orders/INV-2026-0001",
+              "customer_name": "Budi Santoso",
+              "customer_email": "budi@example.com",
+              "customer_phone": "081234567890",
+              "customer_orders": [],
+              "account_id": "550e8400-e29b-41d4-a716-446655440000",
+              "account_number": "1234567890",
+              "account_name": "PT Merchant Contoh",
+              "channel_id": "660e8400-e29b-41d4-a716-446655440001",
+              "channel_name": "Bank Central Asia",
+              "channel_type": "TRANSFER",
+              "channel_instructions": [],
+              "is_manual_match": false,
+              "manual_matched_mutation_id": null
+            }
+          ],
+          "pagination": {
+            "total": 50,
+            "count": 1,
+            "per_page": 20,
+            "current_page": 1,
+            "total_pages": 3
+          }
+        }
+        ```
+      </TabItem>
+      <TabItem value="gagal2" label="Gagal">
+        ```json
+        {
+          "success": false,
+          "code": "internal_error",
+          "message": "internal server error"
+        }
+        ```
+      </TabItem>
+    </Tabs>
+  </TabItem>
+</Tabs>
+
+### Response Fields
+
+Sama dengan [Get by Payment Code](#response-fields) — data dalam bentuk array + objek `pagination`.
+
+| Field Pagination | Tipe | Deskripsi |
+|-----------------|------|-----------|
+| `total` | int | Total data |
+| `count` | int | Data di halaman ini |
+| `per_page` | int | Data per halaman |
+| `current_page` | int | Halaman saat ini |
+| `total_pages` | int | Total halaman |
+
+### Error
+
+| Code | Status | Artinya |
+|------|--------|---------|
+| `tenant_api_key_required` | 403 | API Key tidak valid |
+| `internal_error` | 500 | Server error, coba lagi |
+
+
+**Lanjutan:** Untuk operasi lain, lihat [Payment Cancel](./payment-cancel) atau [Payment Match](./payment-match).
+
+---
+
+
+# Payment Cancel
+
+
+
+Membatalkan invoice yang masih `PENDING`. Status berubah menjadi `CANCELLED`.
+
+:::info
+Hanya invoice dengan status `PENDING` yang bisa dibatalkan. Invoice `PAID` / `EXPIRED` / `CANCELLED` tidak bisa dibatalkan.
+
+Jika customer masih perlu bayar, buat invoice baru dengan `payment_code` baru.
+:::
+
+<Tabs>
+  <TabItem value="request" label="Request" default>
+    <Tabs>
+      <TabItem value="endpoint" label="Endpoint" default>
+        | Method | URL |
+        |--------|-----|
+        | `DELETE` | `/gateway/payments/{payment_code}` |
+      </TabItem>
+      <TabItem value="param" label="Param">
+        | Parameter | Tipe | Wajib | Deskripsi |
+        |-----------|------|-------|-----------|
+        | `payment_code` | string | Ya | Kode invoice dari sistem kamu |
+      </TabItem>
+      <TabItem value="header" label="Header">
+        | Header | Wajib | Deskripsi |
+        |--------|-------|-----------|
+        | `X-Api-Key` | Ya | API Key merchant |
+      </TabItem>
+      <TabItem value="body" label="Body">
+        Tidak ada request body (DELETE).
+      </TabItem>
+      <TabItem value="contoh" label="Contoh">
+        ```bash
+        curl -X DELETE https://api.bayar.digital/gateway/payments/INV-2026-0001 \
+          -H "X-Api-Key: pk_..."
+        ```
+      </TabItem>
+    </Tabs>
+  </TabItem>
+  <TabItem value="response" label="Response">
+    <Tabs>
+      <TabItem value="sukses" label="Sukses" default>
+        ```json
+        {
+          "success": true,
+          "message": "ok",
+          "data": null
+        }
+        ```
+      </TabItem>
+      <TabItem value="gagal" label="Gagal">
+        ```json
+        {
+          "success": false,
+          "code": "payment_not_cancellable",
+          "message": "payment not found or not pending"
+        }
+        ```
+      </TabItem>
+    </Tabs>
+  </TabItem>
+</Tabs>
+
+## Response Fields
+
+| Field | Tipe | Deskripsi |
+|-------|------|-----------|
+| `success` | bool | `true` |
+| `message` | string | `"ok"` |
+| `data` | null | Selalu `null` |
+
+## Error
+
+| Code | Status | Artinya |
+|------|--------|---------|
+| `tenant_api_key_required` | 403 | API Key tidak valid |
+| `payment_not_cancellable` | 404 | Invoice tidak ditemukan atau bukan `PENDING` |
+| `internal_error` | 500 | Server error, coba lagi |
+
+
+**Lanjutan:** Jika customer sudah transfer tapi tidak terdeteksi otomatis, lihat [Payment Match](./payment-match) untuk mencocokkan manual.
+
+---
+
+
+# Payment Match
+
+
+
+Mencocokkan invoice `PENDING` menjadi `PAID` secara manual.
+
+:::info
+Gunakan jika customer sudah transfer tapi Worker tidak mendeteksi otomatis.
+
+Fitur ini memerlukan **2FA (TOTP)** yang diaktifkan di Dashboard → **Akun Saya** → **2FA**. Scan QR code dengan Google Authenticator, lalu gunakan kode 6 digit yang muncul.
+:::
+
+<Tabs>
+  <TabItem value="request" label="Request" default>
+    <Tabs>
+      <TabItem value="endpoint" label="Endpoint" default>
+        | Method | URL |
+        |--------|-----|
+        | `POST` | `/gateway/payments/{payment_code}/match` |
+      </TabItem>
+      <TabItem value="param" label="Param">
+        | Parameter | Tipe | Wajib | Deskripsi |
+        |-----------|------|-------|-----------|
+        | `payment_code` | string | Ya | Kode invoice yang akan dicocokkan |
+      </TabItem>
+      <TabItem value="header" label="Header">
+        | Header | Wajib | Deskripsi |
+        |--------|-------|-----------|
+        | `X-Api-Key` | Ya | API Key merchant |
+        | `X-Totp-Code` | Ya | Kode 6 digit dari Google Authenticator |
+      </TabItem>
+      <TabItem value="body" label="Body">
+        | Field | Tipe | Wajib | Deskripsi |
+        |-------|------|-------|-----------|
+        | `mutation_id` | uuid | Tidak | ID mutasi yang ingin dikaitkan (jika ada) |
+      </TabItem>
+      <TabItem value="contoh" label="Contoh">
+        ```bash
+        curl -X POST https://api.bayar.digital/gateway/payments/INV-2026-0001/match \
+          -H "X-Api-Key: pk_..." \
+          -H "X-Totp-Code: 123456" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "mutation_id": "550e8400-e29b-41d4-a716-446655440020"
+          }'
+        ```
+
+        ```json
+        {
+          "mutation_id": "550e8400-e29b-41d4-a716-446655440020"
+        }
+        ```
+      </TabItem>
+    </Tabs>
+  </TabItem>
+  <TabItem value="response" label="Response">
+    <Tabs>
+      <TabItem value="sukses" label="Sukses" default>
+        ```json
+        {
+          "success": true,
+          "message": "ok",
+          "data": null
+        }
+        ```
+      </TabItem>
+      <TabItem value="gagal" label="Gagal">
+        ```json
+        {
+          "success": false,
+          "code": "invalid totp code",
+          "message": "invalid totp code"
+        }
+        ```
+        ```json
+        {
+          "success": false,
+          "code": "totp_not_enabled",
+          "message": "totp not enabled"
+        }
+        ```
+      </TabItem>
+    </Tabs>
+  </TabItem>
+</Tabs>
+
+## Response Fields
+
+| Field | Tipe | Deskripsi |
+|-------|------|-----------|
+| `success` | bool | `true` |
+| `message` | string | `"ok"` |
+| `data` | null | Selalu `null` |
+
+## Error
+
+| Code | Status | Artinya |
+|------|--------|---------|
+| `X-Totp-Code header is required` | 400 | Header TOTP tidak disertakan |
+| `invalid totp code` | 400 | Kode TOTP salah |
+| `tenant_api_key_required` | 403 | API Key tidak valid |
+| `totp_not_enabled` | 403 | 2FA belum diaktifkan di akun Anda |
+| `not_found` | 404 | Invoice tidak ditemukan atau bukan `PENDING` |
+| `internal_error` | 500 | Server error, coba lagi |
+
+
+**Lanjutan:** Untuk melihat mutasi transfer yang terdeteksi, lihat [Payment Mutations](./payment-mutations).
+
+---
+
+
+# Payment Mutations
+
+
+
+Mendapatkan daftar mutasi/transaksi masuk yang terdeteksi oleh Android Worker dari rekening Anda.
+
+:::info
+Data mutasi berguna untuk rekonsiliasi dan mencocokkan payment secara manual jika otomatis gagal.
+
+**Cara kerja:** Worker mendeteksi notifikasi transfer → kirim ke server → sistem otomatis cocokkan dengan invoice `PENDING` berdasarkan nominal. Jika cocok, invoice jadi `PAID`. Jika tidak, mutasi tetap `unmatched` dan bisa dicocokkan manual via [Payment Match](./payment-match).
+
+Gunakan parameter `only_unmatched=true` untuk melihat mutasi yang belum otomatis cocok.
+:::
+
+<Tabs>
+  <TabItem value="request" label="Request" default>
+    <Tabs>
+      <TabItem value="endpoint" label="Endpoint" default>
+        | Method | URL |
+        |--------|-----|
+        | `GET` | `/gateway/mutations` |
+      </TabItem>
+      <TabItem value="param" label="Param">
+        | Parameter | Tipe | Default | Deskripsi |
+        |-----------|------|---------|-----------|
+        | `page` | integer | 1 | Halaman |
+        | `per_page` | integer | 20 | Data per halaman (max 100) |
+        | `only_unmatched` | bool | `false` | Tampilkan hanya yang **belum** cocok |
+      </TabItem>
+      <TabItem value="header" label="Header">
+        | Header | Wajib | Deskripsi |
+        |--------|-------|-----------|
+        | `X-Api-Key` | Ya | API Key merchant |
+      </TabItem>
+      <TabItem value="body" label="Body">
+        Tidak ada request body (GET).
+      </TabItem>
+      <TabItem value="contoh" label="Contoh">
+        ```bash
+        curl "https://api.bayar.digital/gateway/mutations?only_unmatched=true" \
+          -H "X-Api-Key: pk_..."
+        ```
+      </TabItem>
+    </Tabs>
+  </TabItem>
+  <TabItem value="response" label="Response">
+    <Tabs>
+      <TabItem value="sukses" label="Sukses" default>
+        ```json
+        {
+          "success": true,
+          "message": "ok",
+          "data": [
+            {
+              "id": "550e8400-e29b-41d4-a716-446655440020",
+              "device_id": "660e8400-e29b-41d4-a716-446655440030",
+              "title": "Transfer dari BUDI SANTOSO",
+              "body": "BCA ke 1234567890 a/n PT Merchant Contoh",
+              "posted_at": "2026-06-11T10:30:00Z",
+              "amount_parsed": 50123,
+              "sender_parsed": "BUDI SANTOSO",
+              "type_parsed": "CREDIT",
+              "currency_parsed": "IDR",
+              "is_matched": false,
+              "matched_payment_id": null,
+              "matched_payment_code": null,
+              "created_at": "2026-06-11T10:30:05Z",
+              "device_name": "HP Kantor",
+              "package_name": "com.bca",
+              "app_name": "BCA Mobile",
+              "app_version": "6.2.0",
+              "account_number": "1234567890",
+              "account_name": "PT Merchant Contoh",
+              "bank_name": "Bank Central Asia",
+              "bank_type": "TRANSFER"
+            }
+          ],
+          "pagination": {
+            "total": 50,
+            "count": 1,
+            "per_page": 20,
+            "current_page": 1,
+            "total_pages": 3
+          }
+        }
+        ```
+      </TabItem>
+      <TabItem value="gagal" label="Gagal">
+        ```json
+        {
+          "success": false,
+          "code": "internal_error",
+          "message": "internal server error"
+        }
+        ```
+      </TabItem>
+    </Tabs>
+  </TabItem>
+</Tabs>
+
+## Response Fields
+
+| Field | Tipe | Deskripsi |
+|-------|------|-----------|
+| `id` | uuid | ID mutasi |
+| `device_id` | uuid | ID Android Worker yang mendeteksi |
+| `title` | string/null | Judul notifikasi transfer |
+| `body` | string/null | Detail notifikasi |
+| `posted_at` | datetime | Waktu transaksi |
+| `amount_parsed` | int64 | Nominal transfer |
+| `sender_parsed` | string/null | Nama pengirim (terdeteksi otomatis) |
+| `type_parsed` | string/null | `CREDIT` (masuk) / `DEBIT` (keluar) |
+| `currency_parsed` | string/null | Mata uang (contoh: `IDR`) |
+| `is_matched` | bool | Apakah sudah dipasangkan ke invoice |
+| `matched_payment_id` | uuid/null | ID invoice yang cocok |
+| `matched_payment_code` | string/null | Kode invoice yang cocok |
+| `created_at` | datetime | Waktu terdeteksi oleh sistem |
+| `device_name` | string/null | Nama perangkat Worker |
+| `package_name` | string/null | Package name aplikasi bank |
+| `app_name` | string/null | Nama aplikasi bank |
+| `app_version` | string/null | Versi aplikasi bank |
+| `account_number` | string/null | Rekening tujuan |
+| `account_name` | string/null | Nama pemilik rekening |
+| `bank_name` | string/null | Nama bank |
+| `bank_type` | string/null | `TRANSFER` / `QRIS` |
+
+## Error
+
+| Code | Status | Artinya |
+|------|--------|---------|
+| `tenant_api_key_required` | 403 | API Key tidak valid |
+| `internal_error` | 500 | Server error, coba lagi |
+
+
+**Lanjutan:** Setup [Webhook](./webhook) untuk notifikasi real-time saat status payment berubah.
+
+---
+
+
+# Channel Instructions
+
+
+
+Mendapatkan panduan/langkah-langkah pembayaran untuk channel bank tertentu. Informasi ini bisa kamu tampilkan ke customer.
+
+:::info
+Setiap channel bank bisa punya instruksi berbeda. Gunakan `channel_id` dari response [Payment Account](./payment-account) atau [Payment Create](./payment-create) untuk mengambil panduan langkah demi langkah.
+:::
+
+<Tabs>
+  <TabItem value="request" label="Request" default>
+    <Tabs>
+      <TabItem value="endpoint" label="Endpoint" default>
+        | Method | URL |
+        |--------|-----|
+        | `GET` | `/gateway/channels/{channel_id}/instructions` |
+      </TabItem>
+      <TabItem value="param" label="Param">
+        | Parameter | Tipe | Wajib | Deskripsi |
+        |-----------|------|-------|-----------|
+        | `channel_id` | uuid | Ya | ID channel (dari response `GET /gateway/accounts`) |
+      </TabItem>
+      <TabItem value="header" label="Header">
+        | Header | Wajib | Deskripsi |
+        |--------|-------|-----------|
+        | `X-Api-Key` | Ya | API Key merchant |
+      </TabItem>
+      <TabItem value="body" label="Body">
+        Tidak ada request body (GET).
+      </TabItem>
+      <TabItem value="contoh" label="Contoh">
+        ```bash
+        curl https://api.bayar.digital/gateway/channels/660e8400-e29b-41d4-a716-446655440001/instructions \
+          -H "X-Api-Key: pk_..."
+        ```
+      </TabItem>
+    </Tabs>
+  </TabItem>
+  <TabItem value="response" label="Response">
+    <Tabs>
+      <TabItem value="sukses" label="Sukses" default>
+        ```json
+        {
+          "success": true,
+          "message": "ok",
+          "data": {
+            "channel_id": "660e8400-e29b-41d4-a716-446655440001",
+            "instructions": [
+              {
+                "step": 1,
+                "title": "Buka aplikasi BCA Mobile",
+                "content": "Login ke aplikasi BCA Mobile Anda"
+              },
+              {
+                "step": 2,
+                "title": "Pilih m-Transfer",
+                "content": "Pilih menu m-Transfer > ke Rekening BCA Virtual Account"
+              },
+              {
+                "step": 3,
+                "title": "Masukkan nominal",
+                "content": "Transfer sesuai total yang tertera"
+              }
+            ]
+          }
+        }
+        ```
+      </TabItem>
+      <TabItem value="gagal" label="Gagal">
+        ```json
+        {
+          "success": false,
+          "code": "channel_id is required",
+          "message": "channel id is required"
+        }
+        ```
+      </TabItem>
+    </Tabs>
+  </TabItem>
+</Tabs>
+
+## Response Fields
+
+| Field | Tipe | Deskripsi |
+|-------|------|-----------|
+| `channel_id` | uuid | ID channel |
+| `instructions` | array | Daftar langkah pembayaran |
+
+### Instruction Item
+
+| Field | Tipe | Deskripsi |
+|-------|------|-----------|
+| `step` | int | Urutan langkah |
+| `title` | string | Judul langkah |
+| `content` | string | Penjelasan langkah |
+
+## Error
+
+| Code | Status | Artinya |
+|------|--------|---------|
+| `channel_id is required` | 400 | Parameter `channel_id` kosong |
+| `tenant_api_key_required` | 403 | API Key tidak valid |
+| `internal_error` | 500 | Server error, coba lagi |
+
+
+**Lanjutan:** Setup [Webhook](./webhook) untuk notifikasi otomatis saat payment berubah status.
+
+---
+
+
+# Webhook
+
+
+
+Bayar Digital mengirim **HTTP POST** ke server kamu saat status payment berubah.
+
+:::info
+**Konteks:** Ini adalah cara utama untuk mendapat notifikasi real-time. Webhook lebih cepat dan andal daripada polling manual.
+:::
+
+
+## Setup
+
+Webhook URL dikonfigurasi di Dashboard Tenant pada menu **Merchant**. Kamu bisa:
+
+1. **Webhook URL default** di level Merchant — semua notifikasi dikirim ke URL ini
+2. **Override per invoice** — kirim `payment_webhook_url` saat `POST /gateway/payments`
+
+Selain URL, kamu juga bisa mengatur **Webhook Secret** untuk verifikasi signature.
+
+
+## Event
+
+Webhook dikirim pada event berikut:
+
+| Event | Status Baru | Keterangan |
+|-------|-------------|------------|
+| Customer bayar | `PAID` | Terdeteksi otomatis oleh sistem |
+| Manual match | `PAID` | Kamu cocokkan manual via API/Dashboard |
+| Kedaluwarsa | `EXPIRED` | Melewati `payment_expired_at` |
+| Dibatalkan | `CANCELLED` | Kamu batalkan via API/Dashboard |
+
+
+## Payload
+
+```json
+{
+  "payment_id": "660e8400-e29b-41d4-a716-446655440010",
+  "payment_code": "INV-2026-0001",
+  "status": "PAID",
+  "amount": 50123,
+  "paid_at": "2026-06-11T10:05:00Z"
+}
+```
+
+### Field
+
+| Field | Tipe | Deskripsi |
+|-------|------|-----------|
+| `payment_id` | uuid | ID invoice |
+| `payment_code` | string | Kode invoice dari sistem kamu |
+| `status` | string | `PAID` / `EXPIRED` / `CANCELLED` |
+| `amount` | int64 | **Total** yang dibayar (original + nominal unik) |
+| `paid_at` | datetime | Waktu bayar (ISO 8601). Ada hanya jika `PAID` |
+
+### Contoh per Status
+
+**PAID:**
+```json
+{
+  "payment_id": "660e8400-e29b-41d4-a716-446655440010",
+  "payment_code": "INV-2026-0001",
+  "status": "PAID",
+  "amount": 50123,
+  "paid_at": "2026-06-11T10:05:00Z"
+}
+```
+
+**EXPIRED:**
+```json
+{
+  "payment_id": "660e8400-e29b-41d4-a716-446655440010",
+  "payment_code": "INV-2026-0001",
+  "status": "EXPIRED",
+  "amount": 50123
+}
+```
+
+**CANCELLED:**
+```json
+{
+  "payment_id": "660e8400-e29b-41d4-a716-446655440010",
+  "payment_code": "INV-2026-0001",
+  "status": "CANCELLED",
+  "amount": 50123
+}
+```
+
+
+## Signature Verification
+
+Jika kamu mengisi **Webhook Secret** di Dashboard, setiap request webhook akan menyertakan header:
+
+```
+X-Signature: <hex_hmac_sha256>
+```
+
+Signature dihitung sebagai **HMAC-SHA256** dari *raw JSON body* menggunakan Webhook Secret.
+
+### Cara Verifikasi
+
+```javascript
+const crypto = require('crypto');
+
+function verifyWebhook(body, signature, secret) {
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(JSON.stringify(body))
+    .digest('hex');
+  return expected === signature;
+}
+```
+
+```php
+function verifyWebhook($body, $signature, $secret) {
+    $expected = hash_hmac('sha256', json_encode($body), $secret);
+    return hash_equals($expected, $signature);
+}
+```
+
+```python
+import hmac, hashlib, json
+
+def verify_webhook(body, signature, secret):
+    expected = hmac.new(
+        secret.encode(),
+        json.dumps(body, separators=(',', ':')).encode(),
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)
+```
+
+
+## Handler Requirements
+
+Endpoint webhook kamu harus:
+
+1. **Verifikasi signature** — jika menggunakan Webhook Secret
+2. **Validasi payment_code** — pastikan terdaftar di sistem kamu
+3. **Validasi amount** — cocokkan dengan `payment_total` yang kamu simpan
+4. **Idempotent** — aman dipanggil berkali-kali
+5. **Balas 200 OK** — secepat mungkin
+
+:::tip
+Jika proses update order butuh waktu lama, simpan payload ke antrean dulu, balas `200 OK`, lalu proses async.
+:::
+
+### Contoh Lengkap (Node.js)
+
+```javascript
+app.post('/webhooks/bayar', express.json(), (req, res) => {
+  // 1. Verifikasi signature
+  if (process.env.WEBHOOK_SECRET) {
+    const expected = crypto
+      .createHmac('sha256', process.env.WEBHOOK_SECRET)
+      .update(JSON.stringify(req.body))
+      .digest('hex');
+    if (req.headers['x-signature'] !== expected) {
+      return res.status(401).json({ status: 'invalid signature' });
+    }
+  }
+
+  const { payment_id, payment_code, status, amount } = req.body;
+
+  // 2. Cari order di DB
+  // 3. Validasi amount
+  // 4. Update status (idempotent)
+
+  res.json({ status: 'received' });
+});
+```
+
+### Contoh Lengkap (PHP)
+
+```php
+Route::post('webhooks/bayar', function (Request $request) {
+    $secret = config('services.bayar.webhook_secret');
+
+    if ($secret) {
+        $expected = hash_hmac('sha256', $request->getContent(), $secret);
+        if (!hash_equals($expected, $request->header('X-Signature', ''))) {
+            return response()->json(['status' => 'invalid signature'], 401);
+        }
+    }
+
+    $data = $request->validate([
+        'payment_code' => 'required|string',
+        'status' => 'required|in:PAID,EXPIRED,CANCELLED',
+        'amount' => 'required|integer',
+    ]);
+
+    // Cari order, validasi amount, update status (idempotent)
+
+    return response()->json(['status' => 'received']);
+});
+```
+
+### Contoh Lengkap (Python)
+
+```python
+@app.post("/webhooks/bayar")
+async def webhook(request: Request):
+    body = await request.body()
+    secret = os.environ.get("WEBHOOK_SECRET")
+
+    if secret:
+        expected = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(expected, request.headers.get("x-signature", "")):
+            raise HTTPException(401, "invalid signature")
+
+    data = await request.json()
+    # Cari order, validasi amount, update status (idempotent)
+
+    return {"status": "received"}
+```
+
+
+## Retry Logic
+
+Jika endpoint kamu tidak membalas `2xx`, sistem akan retry secara otomatis:
+
+| Retry ke- | Jeda |
+|-----------|------|
+| 1 | 60 detik |
+| 2 | 120 detik |
+| 3 | 240 detik |
+| 4 | 480 detik |
+| 5 | 960 detik |
+
+Setelah 5 kali gagal, webhook dianggap **FAILED** dan berhenti di-retry otomatis. Kamu bisa kirim ulang manual dari Dashboard.
+
+
+## Idempotency
+
+Webhook bisa terkirim lebih dari sekali. Pastikan handler kamu aman:
+
+- Jika order sudah `PAID` → abaikan webhook `PAID` berikutnya
+- Jangan ubah status `PAID` kembali ke `PENDING` atau status lain
+- Log semua payload untuk audit
+- Gunakan `payment_id` sebagai key idempotent
+
+
+## Troubleshooting
+
+### Webhook selalu gagal?
+
+| Kemungkinan | Solusi |
+|-------------|--------|
+| URL tidak bisa diakses dari internet | Pastikan endpoint kamu publik |
+| Response bukan 2xx | Balas `200 OK` setelah terima |
+| Timeout > 15 detik | Simpan ke queue, balas cepat |
+| SSL certificate tidak valid | Pastikan HTTPS valid |
+
+### Cara cek riwayat webhook
+
+Gunakan endpoint di Dashboard:
+
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| `GET` | `/tenant/callbacks` | Riwayat semua webhook |
+| `GET` | `/tenant/callbacks/:id` | Detail webhook |
+| `POST` | `/tenant/callbacks/:id/retry` | Kirim ulang webhook |
+
+
+**Lanjutan:** Lihat [Status & Error Code](./status-code) untuk referensi lengkap kode error dan retry strategy.
+
+---
+
+
+# Status & Error Code
+
+
+
+
+## HTTP Status
+
+| Status | Arti |
+|--------|------|
+| `200` | OK |
+| `201` | Created (create payment) |
+| `400` | Bad request / validation error |
+| `401` | API Key kosong atau tidak valid |
+| `403` | Tidak punya akses |
+| `404` | Tidak ditemukan |
+| `409` | Conflict (duplicate, cancel gagal) |
+| `429` | Rate limit |
+| `500` | Server error |
+
+
+## Status Payment
+
+| Status | Arti | Terminal |
+|--------|------|----------|
+| `PENDING` | Menunggu pembayaran | Tidak |
+| `PAID` | Terkonfirmasi lunas | Ya |
+| `EXPIRED` | Melewati batas waktu | Ya |
+| `CANCELLED` | Dibatalkan merchant | Ya |
+
+
+## Status Webhook
+
+| Status | Arti |
+|--------|------|
+| `PENDING` | Menunggu dikirim |
+| `RETRYING` | Gagal, akan di-retry |
+| `SUCCESS` | Berhasil (response 2xx dari server kamu) |
+| `FAILED` | Gagal total (melebihi maks retry) |
+
+
+## Error Code
+
+| Code | HTTP | Penyebab | Solusi |
+|------|------|----------|--------|
+| `unauthorized` | 401 | API Key kosong / tidak valid | Kirim `X-Api-Key` yang benar |
+| `tenant_api_key_required` | 403 | API Key bukan merchant tenant | Gunakan API Key dari merchant |
+| `bad_request` | 400 | JSON / body tidak valid | Perbaiki format request |
+| `validation_error` | 400 | Field tidak valid | Cek `errors` di response |
+| `invalid_expired_at` | 400 | Format `payment_expired_at` salah / sudah lewat | Kirim ISO 8601 di masa depan |
+| `not_found` | 404 | Payment tidak ditemukan | Cek `payment_code` |
+| `payment_not_cancellable` | 404 | Payment bukan `PENDING` | Cek status sebelum cancel |
+| `account_not_owned` | 403 | `account_id` bukan milik merchant | Ambil dari `GET /gateway/accounts` |
+| `no_active_quota` | 403 | Kuota akun habis | Top up di Dashboard |
+| `totp_not_enabled` | 403 | 2FA belum diaktifkan | Setup 2FA di pengaturan profil |
+| `payment_code_conflict` | 409 | `payment_code` sudah dipakai | Gunakan kode unik |
+| `unique_amount_conflict` | 409 | Gagal buat nominal unik | Retry beberapa detik lagi |
+| `rate_limited` | 429 | Terlalu banyak request | Tunggu sesuai `X-RateLimit-Reset` |
+| `internal_error` | 500 | Server error | Retry dengan backoff |
+
+
+## Error Handling
+
+### Retry yang Aman
+
+Hanya retry untuk error **sementara**: `429` (rate limit) dan `500` (server error).
+
+```javascript
+async function callAPI(request, maxRetries = 3) {
+  for (let i = 0; i <= maxRetries; i++) {
+    const res = await request();
+    if (res.status !== 429 && res.status < 500) return res;
+    const wait = parseInt(res.headers.get('X-RateLimit-Reset') || i + 1, 10);
+    await new Promise(r => setTimeout(r, wait * 1000));
+  }
+  throw new Error('request failed after retries');
+}
+```
+
+```php
+function callAPI(callable $request, int $maxRetries = 3): array {
+    for ($i = 0; $i <= $maxRetries; $i++) {
+        $res = $request();
+        if ($res['status'] !== 429 && $res['status'] < 500) return $res;
+        $wait = $res['headers']['X-RateLimit-Reset'] ?? ($i + 1);
+        sleep((int) $wait);
+    }
+    throw new \RuntimeException('request failed after retries');
+}
+```
+
+```python
+import time
+
+def call_api(request, max_retries=3):
+    for i in range(max_retries + 1):
+        res = request()
+        if res.status_code != 429 and res.status_code < 500:
+            return res
+        wait = int(res.headers.get('X-RateLimit-Reset', i + 1))
+        time.sleep(wait)
+    raise Exception('request failed after retries')
+```
+
+### Error yang JANGAN di-retry otomatis
+
+| Error | Alasan | Tindakan |
+|-------|--------|----------|
+| `payment_code_conflict` (409) | `payment_code` sudah dipakai | Gunakan kode baru |
+| `validation_error` (400) | Field tidak valid | Perbaiki request |
+| `account_not_owned` (403) | `account_id` salah | Ambil dari `GET /gateway/accounts` |
+| `no_active_quota` (403) | Kuota habis | Top up di Dashboard |
+| `payment_not_cancellable` (404) | Status bukan `PENDING` | Cek status dulu |
+| `unique_amount_conflict` (409) | Nominal unik bentrok | Bisa retry setelah beberapa detik |
+
+
+## Ringkasan
+
+| Error | Retry? | Aksi |
+|-------|--------|------|
+| `429` Rate limit | Ya | Tunggu `X-RateLimit-Reset` |
+| `500` Server error | Ya | Backoff |
+| `400` Validation | Tidak | Perbaiki request |
+| `409` Duplicate code | Tidak | Pakai kode baru |
+| `409` Unique amount | Ya | Tunggu & retry |
+| `404` Not cancellable | Tidak | Cek status dulu |
+| `403` Account | Tidak | Ambil dari `GET /gateway/accounts` |
+| `401` Unauthorized | Tidak | Periksa API Key |
+
+
+**Ini halaman terakhir dokumentasi.** Jika ada masalah, hubungi tim support Bayar Digital.
+
+---
+
+
+_Generated from bayar.digital documentation. Updated 2026-06-17._

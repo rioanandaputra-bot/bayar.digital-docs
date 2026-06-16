@@ -1,0 +1,85 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Bayar Digital Payment Gateway API",
+    "description": "Payment gateway API untuk merchant Indonesia. Transfer bank & QRIS. Lihat dokumentasi lengkap di https://docs.bayar.digital/llms-full.txt",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Bayar Digital Support",
+      "email": "support@bayar.digital",
+      "url": "https://bayar.digital"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.bayar.digital",
+      "description": "Production API"
+    }
+  ],
+  "paths": {
+    "/gateway/accounts": {
+      "get": {
+        "summary": "Daftar rekening tujuan pembayaran",
+        "description": "Mendapatkan daftar rekening bank/QRIS aktif untuk digunakan sebagai tujuan pembayaran.",
+        "operationId": "listPaymentAccounts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Daftar akun berhasil"
+          }
+        }
+      }
+    },
+    "/gateway/payments": {
+      "post": {
+        "summary": "Buat invoice pembayaran baru",
+        "description": "Membuat invoice dengan nominal unik (amount + random code 1-999). payment_code berfungsi sebagai idempotency key.",
+        "operationId": "createPayment",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Invoice berhasil dibuat"
+          },
+          "409": {
+            "description": "payment_code sudah dipakai (conflict)"
+          }
+        }
+      }
+    },
+    "/gateway/payments/{payment_code}": {
+      "get": {
+        "summary": "Detail status pembayaran",
+        "operationId": "getPayment",
+        "parameters": [
+          {
+            "name": "payment_code",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Detail invoice" },
+          "404": { "description": "Invoice tidak ditemukan" }
+        }
+      },
+      "delete": {
+        "summary": "Batalkan invoice PENDING",
+        "operationId": "cancelPayment",
+        "parameters": [
+          {
+            "name": "payment_code",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Invoice dibatalkan" },
+          "404": { "description": "Invoice tidak ditemukan atau bukan PENDING" }
+        }
+      }
+    }
+  },
+  "x-docs-url": "https://docs.bayar.digital/llms-full.txt"
+}

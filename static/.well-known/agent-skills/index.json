@@ -6,14 +6,14 @@
       "type": "skill-md",
       "description": "Bayar Digital payment gateway API for creating, managing, and matching payments",
       "url": "https://docs.bayar.digital/overview",
-      "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      "digest": "sha256:71C7AEB8C9167DA3EF30A1546717A585A468880A4236478BCD552E75DAEAE7ED"
     },
     {
       "name": "mutations-api",
       "type": "skill-md",
       "description": "Bank mutation import and management via Android worker devices",
       "url": "https://docs.bayar.digital/payment-mutations",
-      "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      "digest": "sha256:38CD448C8362E6647C4E62E0A0364A95C46CB8EA5F75074D92D2DDAE3C56BCB5"
     }
   ]
 }

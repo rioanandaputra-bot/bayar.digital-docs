@@ -1,0 +1,58 @@
+# Bayar Digital — Dokumentasi Developer
+
+> Payment gateway semua bank & QRIS untuk merchant Indonesia. Dokumentasi API, panduan integrasi, dan referensi teknis.
+
+## API Base
+
+- Base URL: https://api.bayar.digital
+- Auth: `X-Api-Key` header dengan key `pk_...` dari Dashboard
+- Prefix: `/gateway/`
+
+## Docs
+
+- llms-full.txt (all content): https://docs.bayar.digital/llms-full.txt
+
+### Pendahuluan
+
+- Overview: https://docs.bayar.digital/overview
+  Alur integrasi, setup API Key, Android Worker, dan diagram alur pembayaran.
+- Persiapan: https://docs.bayar.digital/persiapan
+  Prasyarat, base URL, autentikasi, rate limit, response format.
+
+### Pembayaran
+
+- Payment Account: https://docs.bayar.digital/payment-account
+  GET /gateway/accounts — Mendapatkan daftar rekening tujuan pembayaran.
+- Payment Create: https://docs.bayar.digital/payment-create
+  POST /gateway/payments — Membuat invoice dengan nominal unik (amount + random code).
+- Checkout: https://docs.bayar.digital/checkout
+  Halaman checkout untuk customer dengan instruksi pembayaran.
+- Payment Detail: https://docs.bayar.digital/payment-detail
+  GET /gateway/payments/{id} — Detail status dan informasi pembayaran.
+- Payment List: https://docs.bayar.digital/payment-list
+  GET /gateway/payments — Daftar semua transaksi dengan filter dan pagination.
+
+### Operasional
+
+- Payment Cancel: https://docs.bayar.digital/payment-cancel
+  POST /gateway/payments/{id}/cancel — Membatalkan invoice yang masih aktif.
+- Payment Match: https://docs.bayar.digital/payment-match
+  POST /gateway/payments/{id}/match — Mencocokkan pembayaran manual.
+- Payment Mutations: https://docs.bayar.digital/payment-mutations
+  GET /gateway/mutations — Mendapatkan mutasi rekening terdeteksi.
+- Channel Instructions: https://docs.bayar.digital/channel-instructions
+  GET /gateway/instructions — Template instruksi pembayaran per channel.
+
+### Integrasi
+
+- Webhook: https://docs.bayar.digital/webhook
+  Notifikasi real-time status pembayaran via HTTP POST + signature verification.
+- Status & Error Code: https://docs.bayar.digital/status-code
+  Daftar status payment (PENDING, PAID, EXPIRED, CANCELLED, FAILED) dan kode error API.
+
+## Resources
+
+- Dashboard: https://bayar.digital
+- API Playground: https://api.bayar.digital
+- Status: https://status.bayar.digital
+- Support: support@bayar.digital

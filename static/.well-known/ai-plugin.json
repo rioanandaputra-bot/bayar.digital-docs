@@ -1,0 +1,18 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Bayar Digital Docs",
+  "name_for_model": "bayar_digital_docs",
+  "description_for_human": "Payment Gateway API documentation for Indonesian merchants. Create invoices, receive real-time webhooks, manage payments via transfer bank & QRIS.",
+  "description_for_model": "Plugin for accessing Bayar Digital payment gateway API documentation. Use this to help users understand how to integrate with the Bayar Digital API: create payments via POST /gateway/payments, check payment status via GET /gateway/payments/{code}, cancel payments via DELETE /gateway/payments/{code}, match payments manually via POST /gateway/payments/{code}/match, view mutation data via GET /gateway/mutations, list payment accounts via GET /gateway/accounts. All API calls require X-Api-Key header. Base URL is https://api.bayar.digital/gateway/. Full documentation at https://docs.bayar.digital/llms-full.txt. Knowledge cutoff: about payment statuses (PENDING, PAID, EXPIRED, CANCELLED), webhook HMAC-SHA256 signature verification, Android Worker device setup for automatic payment detection.",
+  "auth": {
+    "type": "none"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://docs.bayar.digital/.well-known/openapi.json",
+    "has_user_authentication": false
+  },
+  "logo_url": "https://bayar.digital/favicon-32x32.png",
+  "contact_email": "support@bayar.digital",
+  "legal_info_url": "https://bayar.digital/terms"
+}
