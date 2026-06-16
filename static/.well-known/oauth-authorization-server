@@ -2,13 +2,32 @@
   "issuer": "https://api.bayar.digital",
   "authorization_endpoint": "https://api.bayar.digital/auth/platform/login",
   "token_endpoint": "https://api.bayar.digital/auth/platform/login",
+  "revocation_endpoint": "https://api.bayar.digital/auth/platform/revoke",
   "jwks_uri": "https://api.bayar.digital/.well-known/jwks.json",
-  "grant_types_supported": ["password", "refresh_token"],
+  "grant_types_supported": [
+    "password",
+    "refresh_token",
+    "urn:ietf:params:oauth:grant-type:jwt-bearer",
+    "urn:workos:agent-auth:grant-type:claim"
+  ],
   "response_types_supported": ["token"],
   "scopes_supported": ["read", "write", "admin"],
   "agent_auth": {
+    "skill": "https://bayar.digital/auth.md",
     "register_uri": "https://bayar.digital/auth/register",
+    "identity_endpoint": "https://api.bayar.digital/agent/identity",
+    "claim_endpoint": "https://api.bayar.digital/agent/identity/claim",
+    "events_endpoint": "https://api.bayar.digital/agent/event/notify",
+    "identity_types_supported": ["anonymous", "identity_assertion", "service_auth"],
     "supported_identity_types": ["email_password"],
-    "supported_credential_types": ["access_token"]
+    "supported_credential_types": ["access_token"],
+    "identity_assertion": {
+      "assertion_types_supported": [
+        "urn:ietf:params:oauth:token-type:id-jag"
+      ]
+    },
+    "events_supported": [
+      "https://schemas.workos.com/events/agent/auth/identity/assertion/revoked"
+    ]
   }
 }

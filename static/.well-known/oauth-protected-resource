@@ -1,6 +1,10 @@
 {
   "resource": "https://api.bayar.digital",
+  "resource_name": "Bayar Digital Payment Gateway API",
   "authorization_servers": ["https://api.bayar.digital"],
   "scopes_supported": ["read", "write", "admin"],
-  "bearer_methods_supported": ["header"]
+  "bearer_methods_supported": ["header"],
+  "resource_documentation": "https://docs.bayar.digital/llms-full.txt",
+  "resource_policy_uri": "https://bayar.digital/privacy",
+  "resource_tos_uri": "https://bayar.digital/terms"
 }
