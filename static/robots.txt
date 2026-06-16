@@ -1,3 +1,98 @@
+# AI agent crawlers — explicitly allowed
+User-agent: Novellum
+Allow: /
+
+User-agent: Anchor Browser
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: archive.org_bot
+Allow: /
+
+User-agent: bingbot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: DuckAssistBot
+Allow: /
+
+User-agent: FacebookBot
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Google-CloudVertexBot
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+User-agent: meta-externalfetcher
+Allow: /
+
+User-agent: MistralAI-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: PetalBot
+Allow: /
+
+User-agent: ProRataInc
+Allow: /
+
+User-agent: Timpibot
+Allow: /
+
+User-agent: Manus-User
+Allow: /
+
+User-agent: Terracotta
+Allow: /
+
+User-agent: CloudflareBrowserRenderingCrawler
+Allow: /
+
+User-agent: TikTokSpider
+Allow: /
+
+User-agent: Arquivo-web-crawler
+Allow: /
+
+# General crawlers
 User-agent: *
 Allow: /
 
