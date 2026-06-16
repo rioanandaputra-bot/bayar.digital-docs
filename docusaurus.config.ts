@@ -73,6 +73,12 @@ const config: Config = {
       additionalLanguages: ['bash', 'json', 'yaml', 'javascript'],
     },
   } satisfies Preset.ThemeConfig,
+
+  customFields: {
+    agentName: 'Bayar Digital Documentation',
+    agentDescription: 'Payment Gateway API Documentation for Developers',
+    agentEndpoint: 'https://api.bayar.digital',
+  },
 };
 
 export default config;

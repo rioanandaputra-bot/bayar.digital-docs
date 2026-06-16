@@ -1,0 +1,6 @@
+{
+  "resource": "https://api.bayar.digital",
+  "authorization_servers": ["https://api.bayar.digital"],
+  "scopes_supported": ["read", "write", "admin"],
+  "bearer_methods_supported": ["header"]
+}

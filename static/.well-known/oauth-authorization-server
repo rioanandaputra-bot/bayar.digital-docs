@@ -1,0 +1,14 @@
+{
+  "issuer": "https://api.bayar.digital",
+  "authorization_endpoint": "https://api.bayar.digital/auth/platform/login",
+  "token_endpoint": "https://api.bayar.digital/auth/platform/login",
+  "jwks_uri": "https://api.bayar.digital/.well-known/jwks.json",
+  "grant_types_supported": ["password", "refresh_token"],
+  "response_types_supported": ["token"],
+  "scopes_supported": ["read", "write", "admin"],
+  "agent_auth": {
+    "register_uri": "https://bayar.digital/auth/register",
+    "supported_identity_types": ["email_password"],
+    "supported_credential_types": ["access_token"]
+  }
+}

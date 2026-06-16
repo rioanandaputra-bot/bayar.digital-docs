@@ -1,0 +1,11 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://docs.bayar.digital",
+      "relations": [
+        { "href": "https://api.bayar.digital/.well-known/api-catalog", "rel": "service-desc", "title": "API Catalog" },
+        { "href": "https://api.bayar.digital/health", "rel": "status" }
+      ]
+    }
+  ]
+}

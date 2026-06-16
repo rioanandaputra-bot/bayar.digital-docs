@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# Content Signals — AI agent usage preferences
+Content-Signal: ai-train=yes, search=yes, ai-input=yes
+
+Sitemap: https://docs.bayar.digital/sitemap.xml

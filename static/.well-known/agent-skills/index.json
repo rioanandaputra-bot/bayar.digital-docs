@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "payment-api",
+      "type": "skill-md",
+      "description": "Bayar Digital payment gateway API for creating, managing, and matching payments",
+      "url": "https://docs.bayar.digital/overview",
+      "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "mutations-api",
+      "type": "skill-md",
+      "description": "Bank mutation import and management via Android worker devices",
+      "url": "https://docs.bayar.digital/payment-mutations",
+      "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

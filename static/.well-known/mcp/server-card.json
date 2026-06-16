@@ -1,0 +1,12 @@
+{
+  "serverInfo": {
+    "name": "bayar.digital Documentation",
+    "version": "1.0.0"
+  },
+  "endpoint": "https://docs.bayar.digital",
+  "capabilities": {
+    "tools": false,
+    "resources": true,
+    "prompts": false
+  }
+}
