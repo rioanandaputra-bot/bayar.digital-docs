@@ -8,7 +8,7 @@ You are an agent. Bayar Digital supports **agentic registration**: discover → 
 
 ## Step 1 — Discover
 
-Discovery starts at `/.well-known/oauth-protected-resource`:
+Fetch the Protected Resource Metadata:
 
 ```http
 GET /.well-known/oauth-protected-resource
@@ -16,7 +16,7 @@ GET /.well-known/oauth-protected-resource
 
 ```json
 {
-  "resource": "https://api.bayar.digital",
+  "resource": "https://docs.bayar.digital",
   "resource_name": "Bayar Digital Payment Gateway API",
   "authorization_servers": ["https://api.bayar.digital"],
   "scopes_supported": ["read", "write", "admin"],
@@ -24,20 +24,118 @@ GET /.well-known/oauth-protected-resource
 }
 ```
 
-Then fetch authorization server metadata at `https://api.bayar.digital/.well-known/oauth-authorization-server` to get the `agent_auth` block.
+Then fetch the Authorization Server metadata to get the `agent_auth` block:
 
-## Authentication Methods
+```http
+GET /.well-known/oauth-authorization-server
+```
 
-### API Key (Recommended for Agents)
+```json
+{
+  "issuer": "https://api.bayar.digital",
+  "agent_auth": {
+    "skill": "/auth.md",
+    "register_uri": "https://bayar.digital/auth/register",
+    "identity_endpoint": "https://api.bayar.digital/agent/identity",
+    "claim_endpoint": "https://api.bayar.digital/agent/identity/claim",
+    "events_endpoint": "https://api.bayar.digital/agent/event/notify",
+    "identity_types_supported": ["anonymous", "identity_assertion", "service_auth"],
+    "supported_credential_types": ["access_token"]
+  }
+}
+```
 
-1. Register at https://bayar.digital
-2. Generate an API key from the dashboard
-3. Include it in requests: `X-Api-Key: your-api-key`
+## Step 2 — Register
 
-### JWT Token
+Decide which identity type fits your capabilities:
 
-1. POST to `https://api.bayar.digital/auth/tenant/login` with email and password
-2. Use the returned `access_token` in the `Authorization: Bearer` header
+| Identity Type | When To Use |
+|---|---|
+| **anonymous** | No pre-existing identity; register instantly |
+| **identity_assertion** | You hold a JWT assertion from another issuer |
+| **service_auth** | You have a pre-provisioned service credential |
+
+### Anonymous Registration
+
+```http
+POST https://api.bayar.digital/agent/identity
+Content-Type: application/json
+
+{
+  "identity_type": "anonymous",
+  "client_name": "my-agent"
+}
+```
+
+### Identity Assertion Registration
+
+If you hold an `id_jag` token from an upstream issuer:
+
+```http
+POST https://api.bayar.digital/agent/identity
+Content-Type: application/jose+json
+
+{
+  "identity_type": "identity_assertion",
+  "assertion": "<id_jag token>",
+  "client_name": "my-agent"
+}
+```
+
+## Step 3 — Claim a Client Credential
+
+If the identity response includes a `claim_uri`, POST to it to finalise registration:
+
+```http
+POST https://api.bayar.digital/agent/identity/claim
+Content-Type: application/json
+
+{
+  "identity_id": "<identity_id from Step 2>"
+}
+```
+
+Response:
+
+```json
+{
+  "client_id": "agent_abc123",
+  "client_secret": "secret_xyz789"
+}
+```
+
+## Step 4 — Exchange for Access Token
+
+```http
+POST https://api.bayar.digital/auth/platform/login
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials&client_id=agent_abc123&client_secret=secret_xyz789&scope=read+write
+```
+
+Response:
+
+```json
+{
+  "access_token": "eyJhbGciOi...",
+  "token_type": "Bearer",
+  "scope": "read write",
+  "expires_in": 3600
+}
+```
+
+## Step 5 — Call the API
+
+Include the access token in all requests:
+
+```http
+GET https://api.bayar.digital/health
+Authorization: Bearer eyJhbGciOi...
+```
+
+## Step 6 — Handle Revocation
+
+If you receive a revocation event (via the `events_endpoint` webhook or a 401 response), re-register starting from Step 2.
 
 ## Scopes
 

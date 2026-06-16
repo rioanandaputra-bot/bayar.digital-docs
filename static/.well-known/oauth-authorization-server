@@ -13,7 +13,7 @@
   "response_types_supported": ["token"],
   "scopes_supported": ["read", "write", "admin"],
   "agent_auth": {
-    "skill": "https://bayar.digital/auth.md",
+    "skill": "/auth.md",
     "register_uri": "https://bayar.digital/auth/register",
     "identity_endpoint": "https://api.bayar.digital/agent/identity",
     "claim_endpoint": "https://api.bayar.digital/agent/identity/claim",
