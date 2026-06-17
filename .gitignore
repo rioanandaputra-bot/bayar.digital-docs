@@ -9,8 +9,8 @@ package-lock.json
 .docusaurus
 .cache-loader
 
-# Generated markdown copies for download
-/static/markdown
+# Agent-facing markdown files (NOT generated — manually curated for AI discovery)
+# /static/markdown — uncomment to exclude from git tracking
 
 # Misc
 .DS_Store

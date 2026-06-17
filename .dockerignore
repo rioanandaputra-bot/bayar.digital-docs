@@ -6,7 +6,8 @@ build
 .gitignore
 .env
 .env.*
-*.md
+# Only exclude root-level readme, NOT agent-facing .md files
+/README.md
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
