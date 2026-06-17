@@ -1,4 +1,10 @@
-{
-  "url": "https://context7.com/websites/bayar_digital",
-  "public_key": "pk_9k1IZY47FuMX8uPeItoYe"
-}
+[
+  {
+    "url": "https://context7.com/websites/bayar_digital",
+    "public_key": "pk_9k1IZY47FuMX8uPeItoYe"
+  },
+  {
+    "url": "https://context7.com/llmstxt/bayar_digital_llms-full_txt",
+    "public_key": "pk_9k1IZY47FuMX8uPeItoYe"
+  }
+]
