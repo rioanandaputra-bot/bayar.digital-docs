@@ -1,0 +1,48 @@
+{
+  "name": "Bayar Digital Documentation",
+  "description": "Complete documentation for the Bayar Digital payment gateway API. Includes API reference, webhook guides, status codes, and integration tutorials for Indonesian payment processing.",
+  "url": "https://docs.bayar.digital",
+  "version": "1.0.0",
+  "documentationUrl": "https://docs.bayar.digital",
+  "provider": {
+    "organization": "Bayar Digital",
+    "url": "https://bayar.digital"
+  },
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": false
+  },
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["text/plain", "application/json"],
+  "skills": [
+    {
+      "id": "api-reference",
+      "name": "API Reference",
+      "description": "Complete API endpoint documentation with request/response examples, authentication details, and error codes.",
+      "tags": ["api", "reference", "endpoints", "documentation"],
+      "examples": ["How to create a payment via API", "API authentication methods", "Error code reference"]
+    },
+    {
+      "id": "webhook-guide",
+      "name": "Webhook Guide",
+      "description": "Webhook event types, payload structures, security verification, and integration best practices.",
+      "tags": ["webhooks", "events", "integration"],
+      "examples": ["Webhook event types and payloads", "Verify webhook signature", "Set up webhook endpoints"]
+    },
+    {
+      "id": "integration-tutorials",
+      "name": "Integration Tutorials",
+      "description": "Step-by-step guides for integrating the payment gateway in various programming languages and frameworks.",
+      "tags": ["tutorials", "integration", "sdk", "guide"],
+      "examples": ["Node.js integration guide", "React payment form setup", "Mobile SDK quickstart"]
+    },
+    {
+      "id": "status-codes",
+      "name": "Status and Error Codes",
+      "description": "Complete reference of HTTP status codes, payment statuses, and error codes used by the Bayar Digital API.",
+      "tags": ["status", "codes", "errors", "debugging", "troubleshooting"],
+      "examples": ["List all payment statuses", "Troubleshoot common error codes", "Understand API response statuses"]
+    }
+  ]
+}
