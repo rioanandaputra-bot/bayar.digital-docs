@@ -2,6 +2,13 @@
   "name": "Bayar Digital Documentation",
   "description": "Complete documentation for the Bayar Digital payment gateway API. Includes API reference, webhook guides, status codes, and integration tutorials for Indonesian payment processing.",
   "url": "https://docs.bayar.digital",
+  "supportedInterfaces": [
+    {
+      "url": "https://docs.bayar.digital",
+      "protocolBinding": "HTTP+JSON",
+      "protocolVersion": "1.0"
+    }
+  ],
   "version": "1.0.0",
   "documentationUrl": "https://docs.bayar.digital",
   "provider": {
