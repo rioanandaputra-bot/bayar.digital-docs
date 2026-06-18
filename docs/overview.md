@@ -6,6 +6,12 @@ sidebar_position: 1
 
 Dokumentasi integrasi Payment Gateway Bayar Digital untuk developer. Sistem Anda dapat membuat invoice, mengecek status, dan menerima notifikasi real-time secara otomatis.
 
+**Konfigurasi API**
+* **Base URL:** `https://api.bayar.digital` (gunakan *prefix* `/gateway/`).
+* **Autentikasi:** Kirimkan API Key pada *header* `X-Api-Key` di setiap *request*. Dapatkan *key* (`pk_...`) dari Dashboard [Merchant](https://bayar.digital/tenant/merchants) dan simpan aman di *environment variable*.
+* **Webhook Endpoint:** Siapkan *endpoint* di server Anda untuk menerima notifikasi perubahan status transaksi.
+
+
 ## Alur Kerja Utama
 
 ```mermaid
@@ -30,15 +36,6 @@ sequenceDiagram
 3. **Pembayaran:** Pelanggan melakukan transfer sesuai instruksi.
 4. **Deteksi Otomatis:** Aplikasi Android Worker mendeteksi mutasi transfer masuk.
 5. **Notifikasi:** Server menerima *webhook* berstatus `PAID` untuk memproses pesanan.
-
----
-
-## Persiapan Sistem
-
-**Konfigurasi API**
-* **Base URL:** `https://api.bayar.digital` (gunakan *prefix* `/gateway/`).
-* **Autentikasi:** Kirimkan API Key pada *header* `X-Api-Key` di setiap *request*. Dapatkan *key* (`pk_...`) dari Dashboard [Merchant](https://bayar.digital/tenant/merchants) dan simpan aman di *environment variable*.
-* **Webhook Endpoint:** Siapkan *endpoint* di server Anda untuk menerima notifikasi perubahan status transaksi.
 
 ---
 
