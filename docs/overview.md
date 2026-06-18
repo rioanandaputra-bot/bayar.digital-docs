@@ -48,8 +48,6 @@ Bayar Digital Worker adalah aplikasi Android pendukung khusus [Merchant](https:/
 
 Worker bekerja secara spesifik hanya pada bank yang Anda izinkan via [Pengelola Rekening](https://bayar.digital/tenant/accounts). Notifikasi dari aplikasi lain atau info perbankan non-transaksi **TIDAK PERNAH** dikirim ke server. Gerbang 2 lapis (Worker + Sistem) otomatis memblokir semua data di luar mutasi masuk — privasi Anda dipastikan aman.
 
----
-
 ### ⚠️ Informasi Penting: Peringatan Keamanan (Play Protect)
 
 Karena aplikasi ini diunduh langsung dari sistem kami (bukan melalui Google Play Store) dan menggunakan fitur pemantauan latar belakang, fitur keamanan bawaan Android **(Google Play Protect)** kemungkinan akan memunculkan peringatan saat proses instalasi (seperti peringatan *"Aplikasi tidak dikenal"* atau *"Unsafe app blocked"*).
@@ -59,8 +57,6 @@ Karena aplikasi ini diunduh langsung dari sistem kami (bukan melalui Google Play
 1. Saat layar peringatan Play Protect merah muncul, klik tulisan **"Detail selengkapnya"** (*More details*).
 2. Pilih opsi **"Tetap instal"** (*Install anyway*).
 3. Jika muncul *pop-up* yang meminta mengirim aplikasi untuk dipindai, Anda cukup memilih **"Jangan kirim"** (*Don't send*).
-
----
 
 ### Syarat Perangkat
 
