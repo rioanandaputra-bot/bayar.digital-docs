@@ -80,3 +80,11 @@ table tr:nth-child(2n) {
 table th {
   background-color: var(--ifm-table-stripe-background);
 }
+
+.footer__legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}

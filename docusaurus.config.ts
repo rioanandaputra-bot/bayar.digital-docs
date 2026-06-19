@@ -65,25 +65,7 @@ const config: Config = {
     },
     footer: {
       style: 'dark',
-      links: [
-        {
-          title: 'Legal',
-          items: [
-            {
-              label: 'Disclaimer',
-              href: 'https://bayar.digital/disclaimer',
-            },
-            {
-              label: 'Kebijakan Privasi',
-              href: 'https://bayar.digital/privacy',
-            },
-            {
-              label: 'Syarat & Ketentuan',
-              href: 'https://bayar.digital/terms',
-            },
-          ],
-        },
-      ],
+      links: [],
       copyright: `Copyright © 2026 Bayar Digital`,
     },
     prism: {
@@ -97,6 +79,20 @@ const config: Config = {
     agentName: 'Bayar Digital Documentation',
     agentDescription: 'Payment Gateway API Documentation for Developers',
     agentEndpoint: 'https://api.bayar.digital',
+    legalLinks: [
+      {
+        label: 'Disclaimer',
+        href: 'https://bayar.digital/disclaimer',
+      },
+      {
+        label: 'Kebijakan Privasi',
+        href: 'https://bayar.digital/privacy',
+      },
+      {
+        label: 'Syarat & Ketentuan',
+        href: 'https://bayar.digital/terms',
+      },
+    ],
   },
 };
 
