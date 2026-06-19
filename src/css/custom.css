@@ -81,6 +81,10 @@ table th {
   background-color: var(--ifm-table-stripe-background);
 }
 
+.footer__copyright {
+  text-align: center;
+}
+
 .footer__legal-links {
   display: flex;
   flex-wrap: wrap;
