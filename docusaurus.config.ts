@@ -18,7 +18,11 @@ const config: Config = {
 
   i18n: {
     defaultLocale: 'id',
-    locales: ['id'],
+    locales: ['id', 'en'],
+    localeConfigs: {
+      id: { label: 'Indonesia' },
+      en: { label: 'English' },
+    },
   },
 
   markdown: {
@@ -56,6 +60,10 @@ const config: Config = {
         src: 'img/logo.png',
       },
       items: [
+        {
+          type: 'localeDropdown',
+          position: 'right',
+        },
         {
           href: 'https://bayar.digital',
           label: 'Dashboard',
