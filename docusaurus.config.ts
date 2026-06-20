@@ -13,15 +13,11 @@ const config: Config = {
   organizationName: 'bayardigital',
   projectName: 'developer-docs',
 
-  onBrokenLinks: 'warn',
-  onBrokenMarkdownLinks: 'warn',
-
-  i18n: {
-    defaultLocale: 'id',
-    locales: ['id'],
-  },
-
+  onBrokenLinks: 'throw',
   markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: 'throw',
+    },
     mermaid: true,
   },
 

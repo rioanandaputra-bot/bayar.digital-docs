@@ -8,8 +8,6 @@ const sidebars: SidebarsConfig = {
       collapsible: false,
       items: [
         {type: 'doc', id: 'overview', label: 'Overview'},
-        // {type: 'doc', id: 'persiapan', label: 'Persiapan'},
-        // {type: 'doc', id: 'android-worker', label: 'Android Worker'},
       ],
     },
     {

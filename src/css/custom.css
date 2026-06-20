@@ -48,26 +48,6 @@ a.doc-markdown-btn:hover {
   text-decoration: none;
 }
 
-.doc-markdown-btn--download {
-  background: var(--ifm-color-primary);
-  color: #fff;
-}
-
-.doc-markdown-btn--download:hover {
-  background: var(--ifm-color-primary-darker);
-  color: #fff;
-}
-
-.doc-markdown-btn--copy {
-  background: transparent;
-  color: var(--ifm-color-primary);
-}
-
-.doc-markdown-btn--copy:hover {
-  background: var(--ifm-color-primary);
-  color: #fff;
-}
-
 table {
   display: table;
   width: 100%;

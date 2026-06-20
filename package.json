@@ -1,13 +1,11 @@
 {
-  "name": "docs",
+  "name": "bayar-digital-docs",
   "version": "0.0.0",
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
     "start": "docusaurus start",
-    "prebuild": "node scripts/copy-markdown.mjs",
     "build": "docusaurus build",
-    "prestart": "node scripts/copy-markdown.mjs",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
     "clear": "docusaurus clear",
